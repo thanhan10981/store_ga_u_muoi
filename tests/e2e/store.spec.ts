@@ -1,5 +1,32 @@
 import { test, expect } from "@playwright/test";
 
+test("login hides store data, toggles password visibility and rejects invalid or unverified sessions", async ({ page }) => {
+  let attempts = 0;
+  await page.route("**/api/store/**", async route => {
+    if (route.request().url().endsWith("/login")) {
+      attempts++;
+      return route.fulfill({ status: attempts === 1 ? 401 : 200, json: attempts === 1 ? { error: "Tên đăng nhập hoặc mật khẩu không đúng." } : { username: "owner", csrf: "test-only" } });
+    }
+    return route.fulfill({ status: 401, json: { error: "Vui lòng đăng nhập." } });
+  });
+  await page.goto("/login");
+  await expect(page.getByRole("heading", { name: "Đăng nhập quản lý" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Báo cáo từ sổ cửa hàng" })).toHaveCount(0);
+  await page.getByLabel("Tên đăng nhập", { exact: true }).fill("owner");
+  await page.getByLabel("Mật khẩu", { exact: true }).fill("test-only-password");
+  await expect(page.getByLabel("Mật khẩu", { exact: true })).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Hiện mật khẩu", exact: true }).click();
+  await expect(page.getByLabel("Mật khẩu", { exact: true })).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "Ẩn mật khẩu", exact: true }).click();
+  await page.getByLabel("Mã Authenticator", { exact: true }).fill("123456");
+  await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Tên đăng nhập hoặc mật khẩu không đúng.");
+  await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Chưa xác minh được phiên đăng nhập.");
+  await expect(page.getByRole("heading", { name: "Báo cáo từ sổ cửa hàng" })).toHaveCount(0);
+  await page.screenshot({ path: "artifacts/store-login.png", fullPage: true });
+});
+
 test("simulated store workflow: login, review draft, confirm once, inspect report and logout", async ({ page }) => {
   let loggedIn = false;
   let confirmed = 0;
@@ -16,7 +43,7 @@ test("simulated store workflow: login, review draft, confirm once, inspect repor
   });
   await page.goto("/store");
   await page.getByLabel("Tên đăng nhập").fill("owner");
-  await page.getByLabel("Mật khẩu").fill("simulated-password");
+  await page.getByLabel("Mật khẩu", { exact: true }).fill("simulated-password");
   await page.getByLabel("Mã Authenticator").fill("123456");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await page.getByLabel("Nhắn cho trợ lý").fill("Nhập 30 con gà giá 120k/con và 50 hộp giá 3k/cái");

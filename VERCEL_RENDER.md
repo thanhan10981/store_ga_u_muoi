@@ -10,7 +10,7 @@ Browser chỉ gọi Vercel. Vercel chuyển cookie/CSRF sang Render và trả Se
 
 Đẩy mã lên repository Git riêng, import vào Vercel. Chọn Next.js, root directory là thư mục có `package.json`, Node 24, build `npm run build`, install `npm ci`; giữ Output Directory mặc định. `vercel.json` đã khai báo build. Lấy domain production ổn định, ví dụ `https://your-shop.vercel.app`; nếu có custom domain, dùng domain chính đó ngay từ đầu.
 
-Lần deploy đầu chưa cấu hình backend chưa sử dụng được cửa hàng. Thêm biến production ở bước 4 rồi redeploy. Không gắn database và secret production cho Preview deployments; preview frontend cần backend/database staging riêng nếu muốn đăng nhập thử.
+Trên Vercel, trang chủ luôn hiển thị màn hình đăng nhập quản lý; có thể truy cập trực tiếp `/login` hoặc `/store`. Lần deploy đầu chưa cấu hình backend sẽ thấy thông báo chưa kết nối backend, chưa thể đăng nhập. Thêm biến production ở bước 4 rồi redeploy. Không gắn database và secret production cho Preview deployments; preview frontend cần backend/database staging riêng nếu muốn đăng nhập thử.
 
 ## 2. Render Blueprint: backend và database
 

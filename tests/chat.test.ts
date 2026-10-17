@@ -39,6 +39,11 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe("server validation and secrets", () => {
+  it("disables the legacy anonymous chat endpoint on Vercel even before backend setup", async () => {
+    vi.stubEnv("VERCEL", "1"); vi.stubEnv("STORE_BACKEND_URL", "");
+    expect((await POST(request())).status).toBe(403);
+    expect(sdk.create).not.toHaveBeenCalled();
+  });
   it("reports missing key without calling OpenAI", async () => {
     vi.stubEnv("OPENAI_API_KEY", "");
     const response = await POST(request());

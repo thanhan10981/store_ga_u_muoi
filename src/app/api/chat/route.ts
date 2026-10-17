@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  if (process.env.STORE_BACKEND_URL || process.env.NODE_ENV === "production" && process.env.APP_ORIGIN) {
+  if (process.env.VERCEL || process.env.STORE_BACKEND_URL || process.env.NODE_ENV === "production" && process.env.APP_ORIGIN) {
     return Response.json({ error: { code: "STORE_MODE", message: "Hãy đăng nhập và sử dụng chatbot cửa hàng." } }, { status: 403 });
   }
   let release: (() => void) | undefined;

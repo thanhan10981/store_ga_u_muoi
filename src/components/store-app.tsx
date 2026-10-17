@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { StoreLogin } from "./store-login";
 import "./store.css";
 
 type Line = { name: string; unit: string; quantity: number; unitPrice: number };
@@ -60,11 +61,12 @@ export function StoreApp() {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     void run(async () => {
-      const session = await api("login", { username: data.get("username"), password: data.get("password"), otp: data.get("otp") });
-      setUser(session);
+      await api("login", { username: data.get("username"), password: data.get("password"), otp: data.get("otp") });
       // Re-fetch authoritative pending draft after login (including another device's draft).
       const response = await fetch("/api/store/session", { cache: "no-store" });
-      if (response.ok) { const state = await response.json(); setDraft(state.draft); setMessages(state.messages ?? []); }
+      if (!response.ok) throw new Error("Chưa xác minh được phiên đăng nhập. Hãy tải lại trang rồi thử lại.");
+      const state = await response.json();
+      setUser(state); setDraft(state.draft); setMessages(state.messages ?? []);
     });
   }
   function send(event: FormEvent) {
@@ -85,7 +87,7 @@ export function StoreApp() {
     </header>
     {error && <div className="store-error" role="alert">{error}</div>}
     {notice && <div className="store-notice" role="status">{notice}</div>}
-    {loading ? <p>Đang kiểm tra phiên đăng nhập…</p> : !user ? <section className="store-login store-card"><span className="store-eyebrow">DÀNH CHO CHỦ CỬA HÀNG</span><h2>Đăng nhập quản lý</h2><p>Dữ liệu cửa hàng chỉ hiển thị sau khi đăng nhập.</p><form onSubmit={login}><label>Tên đăng nhập<input name="username" autoComplete="username" required maxLength={80} /></label><label>Mật khẩu<input name="password" type="password" autoComplete="current-password" required maxLength={256} /></label><label>Mã Authenticator<input name="otp" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="6 chữ số" /></label><button className="store-primary" disabled={busy}>{busy ? "Đang đăng nhập…" : "Đăng nhập"}</button></form></section> : <div className="store-grid">
+    {loading ? <p>Đang kiểm tra phiên đăng nhập…</p> : !user ? <StoreLogin busy={busy} onSubmit={login} /> : <div className="store-grid">
       <section className="store-card store-chat"><div className="store-section-heading"><h2>Trợ lý cửa hàng</h2><span>Cần xác nhận trước khi ghi sổ</span></div>
         <p className="store-muted">Ví dụ: “Hôm nay nhập 30 con gà ủ muối giá 120.000đ/con, 50 hộp giá 3.000đ/hộp”. Ghi rõ đơn giá và đơn vị từng món; bạn có thể bổ sung qua nhiều tin nhắn.</p>
         <div className="store-messages" aria-live="polite">{messages.length === 0 && <div className="store-empty">Bắt đầu bằng một phiếu nhập, phiếu bán hoặc câu hỏi “Tình hình buôn bán tháng này và cần nhập thêm gì?”</div>}{messages.map((message, i) => <article key={i} className={`store-message ${message.role === "user" ? "is-user" : ""}`}><strong>{message.role === "user" ? "Bạn" : "Mạch"}</strong><p>{message.content}</p></article>)}</div>

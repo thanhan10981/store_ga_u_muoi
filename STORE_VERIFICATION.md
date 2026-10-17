@@ -1,5 +1,13 @@
 # Kết quả xác minh quản lý cửa hàng — 17/10/2026
 
+## Cập nhật đăng nhập
+
+- Vercel luôn hiển thị luồng đăng nhập ở `/`, kể cả khi chưa cấu hình Render; thêm `/login`. Chat local cũ vẫn dùng được khi phát triển local, API chat cũ bị tắt trên Vercel.
+- Form đăng nhập riêng có tên tài khoản, mật khẩu, hiện/ẩn mật khẩu và mã Authenticator. Chỉ mở khu quản lý sau khi đăng nhập và kiểm tra lại phiên thành công.
+- `npm test`: 32 test đạt; build production và ESLint các file thay đổi đạt.
+- Playwright cửa hàng: 2 test đạt, gồm sai mật khẩu, từ chối phiên chưa xác minh, hiện/ẩn mật khẩu và luồng xem/xác nhận phiếu. Đã kiểm tra ảnh `artifacts/store-login.png`.
+- Xác thực thực tế vẫn cần backend Render, schema/owner đã khởi tạo và các biến môi trường; không có tài khoản/mật khẩu mặc định hoặc cơ chế đăng nhập giả.
+
 ## Cập nhật Vercel + Render
 
 - Thêm `render.yaml` (API Docker + PostgreSQL cùng region, external DB access mặc định tắt), `vercel.json`, biến môi trường mẫu và [VERCEL_RENDER.md](VERCEL_RENDER.md).
