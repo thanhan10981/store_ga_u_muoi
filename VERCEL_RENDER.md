@@ -14,7 +14,11 @@ Trên Vercel, trang chủ luôn hiển thị màn hình đăng nhập quản lý
 
 ## 2. Render Blueprint: backend và database
 
-Render → New → Blueprint → chọn cùng repo, dùng `render.yaml`. File tạo một Web Service Docker và PostgreSQL 18 cùng region Singapore. Blueprint đang chọn **gói trả phí** (`0.5c-512mb` cho API, `0.1c-256mb` cho DB); xem chi phí trên màn hình Render trước khi tạo. Không có tài nguyên nào đã được tạo từ máy này.
+Render → New → Blueprint → chọn cùng repo, dùng `render.yaml`. File tạo một Web Service Docker và PostgreSQL 18 cùng region Singapore, cả hai có **`plan: free`** theo lựa chọn hiện tại. Không có tài nguyên nào đã được tạo từ máy này. Kiểm tra cả hai tài nguyên hiển thị Free trước khi tạo; không nhập thông tin thanh toán để tiếp tục một cấu hình vẫn hiện Paid.
+
+Giới hạn Free theo [Render](https://render.com/docs/free): backend ngủ sau 15 phút không có traffic, lần gọi đầu có thể chờ khoảng một phút; PostgreSQL Free giới hạn 1 GB, mỗi workspace chỉ có một DB Free và **hết hạn sau 30 ngày**. DB hết hạn không truy cập được; nếu không nâng cấp, dữ liệu sẽ bị xóa sau thời gian gia hạn 14 ngày. Cần xuất dữ liệu trước hạn hoặc chuyển database sang nơi khác nếu muốn tiếp tục miễn phí; đây không phải PostgreSQL miễn phí lâu dài. Backend ngủ có thể khiến lần đăng nhập/chat đầu timeout, hãy chờ backend thức rồi thử lại; không tự retry thao tác xác nhận giao dịch.
+
+Gói hosting Free không làm API OpenAI miễn phí; API key backend vẫn có chi phí/hạn mức riêng. Không publish ChatMock local để thay thế cấu hình API này.
 
 Điền các giá trị Render yêu cầu:
 

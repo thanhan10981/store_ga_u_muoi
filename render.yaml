@@ -4,7 +4,7 @@ services:
   - type: web
     name: ga-u-muoi-api
     runtime: docker
-    plan: 0.5c-512mb
+    plan: free
     region: singapore
     dockerfilePath: ./Dockerfile
     dockerContext: .
@@ -47,7 +47,8 @@ databases:
   - name: ga-u-muoi-db
     databaseName: store
     user: store_admin
-    plan: 0.1c-256mb
+    # Render Free Postgres expires after 30 days; export data before expiry.
+    plan: free
     region: singapore
     postgresMajorVersion: "18"
     # Block public DB access. Temporarily allow only your own IP for local bootstrap.

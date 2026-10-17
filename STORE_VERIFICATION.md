@@ -15,7 +15,7 @@
 - `npm test`: 29 test đạt, gồm kiểm tra proxy Vercel từ chối backend HTTP/URL sai định dạng.
 - `npm run test:backend`: 11 test đạt, có health check không cần secret nhưng không trả dữ liệu cửa hàng; script Render cấp quyền và xoay mật khẩu runtime được chạy với PostgreSQL nhúng.
 - ESLint các file thay đổi và kiểm tra cú pháp setup script: đạt.
-- Chưa tạo tài nguyên, xác thực Blueprint trên Render hoặc deploy tài khoản Vercel/Render thật. Script khởi tạo cần được xác minh với quyền admin thực tế của database Render. Blueprint chọn gói trả phí, chỉ tạo khi người dùng chủ động áp dụng.
+- Chưa tạo tài nguyên, xác thực Blueprint trên Render hoặc deploy tài khoản Vercel/Render thật. Script khởi tạo cần được xác minh với quyền admin thực tế của database Render. Theo yêu cầu miễn phí, cả backend và DB trong Blueprint đã đổi thành `plan: free`; PostgreSQL Render Free hết hạn sau 30 ngày, không phải miễn phí lâu dài.
 
 ## Đã chạy
 
