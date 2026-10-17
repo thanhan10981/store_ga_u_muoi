@@ -1,6 +1,6 @@
 # Mạch — Chatbot OpenAI bằng tiếng Việt
 
-**Quản lý cửa hàng gà ủ muối:** deploy frontend Vercel, backend + PostgreSQL Render theo [VERCEL_RENDER.md](VERCEL_RENDER.md). Đã có `render.yaml`, `vercel.json` và công cụ khởi tạo database. [DEPLOYMENT.md](DEPLOYMENT.md) giải thích nghiệp vụ/bảo mật và phương án Docker Compose thay thế. Khi đặt `STORE_BACKEND_URL`, trang chính chuyển sang giao diện quản lý; `/store` mở giao diện cửa hàng. Hướng dẫn bên dưới dành cho chế độ chat local trước đây.
+**Quản lý cửa hàng gà ủ muối:** cấu hình backend **Render Free + PostgreSQL Neon** theo [RENDER_BACKEND.md](RENDER_BACKEND.md). `render.yaml` chỉ tạo backend Free; công cụ khởi tạo database có sẵn. [DEPLOYMENT.md](DEPLOYMENT.md) giải thích nghiệp vụ/bảo mật và phương án Docker Compose thay thế. Trên Vercel trang chủ luôn vào luồng đăng nhập; `/login` và `/store` cũng mở giao diện cửa hàng. Hướng dẫn bên dưới dành cho chế độ chat local trước đây.
 
 Next.js App Router, TypeScript, Tailwind CSS, SDK OpenAI chính thức và Responses API streaming. Chạy local trên Windows/macOS/Linux với Node.js **20.9+** (khuyến nghị Node 24) và npm.
 

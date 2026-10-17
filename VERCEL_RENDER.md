@@ -1,5 +1,7 @@
 # Frontend Vercel · Backend Render · PostgreSQL Render
 
+**Cấu hình backend đã chuyển sang Render Free + PostgreSQL Neon.** Dùng [RENDER_BACKEND.md](RENDER_BACKEND.md) và `.env.render.example`; `render.yaml` hiện chỉ tạo backend, không còn database Render. Các bước database Render dưới đây là phương án cũ, không áp dụng với Blueprint hiện tại. Vercel Hobby giới hạn mục đích phi thương mại; cấu hình frontend vận hành cửa hàng cần chọn host/gói phù hợp riêng.
+
 Đây là phương án deploy chính theo lựa chọn của bạn. Không cần deploy Caddy hoặc chạy Docker Compose trên máy chủ. Vercel build Next.js; Render build **stage backend cuối cùng** trong Dockerfile hiện tại. Dockerfile vẫn hỗ trợ triển khai frontend bằng Docker nếu cần, nhưng Vercel không dùng stage đó.
 
 Luồng: **Browser → HTTPS Vercel `/api/store/*` → HTTPS Render API → PostgreSQL nội bộ Render**.

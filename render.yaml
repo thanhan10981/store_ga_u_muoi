@@ -1,5 +1,5 @@
-# Backend + PostgreSQL only. Frontend is deployed separately on Vercel.
-# Bootstrap the DB first using deploy/render-setup.mjs; see VERCEL_RENDER.md.
+# Backend only on Render Free; PostgreSQL is hosted separately on Neon.
+# See RENDER_BACKEND.md. No Render database is created by this Blueprint.
 services:
   - type: web
     name: ga-u-muoi-api
@@ -18,21 +18,7 @@ services:
         sync: false
       - key: BACKEND_PROXY_SECRET
         generateValue: true
-      - key: PGHOST
-        fromDatabase:
-          name: ga-u-muoi-db
-          property: host
-      - key: PGPORT
-        fromDatabase:
-          name: ga-u-muoi-db
-          property: port
-      - key: PGDATABASE
-        fromDatabase:
-          name: ga-u-muoi-db
-          property: database
-      - key: PGUSER
-        value: store_app
-      - key: PGPASSWORD
+      - key: DATABASE_URL
         sync: false
       - key: OPENAI_API_KEY
         sync: false
@@ -43,13 +29,3 @@ services:
       - key: AI_DAILY_LIMIT
         value: "100"
 
-databases:
-  - name: ga-u-muoi-db
-    databaseName: store
-    user: store_admin
-    # Render Free Postgres expires after 30 days; export data before expiry.
-    plan: free
-    region: singapore
-    postgresMajorVersion: "18"
-    # Block public DB access. Temporarily allow only your own IP for local bootstrap.
-    ipAllowList: []

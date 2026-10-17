@@ -8,6 +8,7 @@ dist/
 !.env.backend.example
 !.env.vercel.example
 !.env.render-admin.example
+!.env.render.example
 backups/
 *.dump
 *.tsbuildinfo
