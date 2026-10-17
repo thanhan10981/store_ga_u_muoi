@@ -1,0 +1,12 @@
+**/node_modules
+.next
+.git
+.env*
+**/auth.json
+ChatMock-main
+.npm-cache
+test-results
+artifacts
+backups
+*.dump
+*.log

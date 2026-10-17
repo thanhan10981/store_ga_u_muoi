@@ -1,0 +1,106 @@
+name: ga-u-muoi
+services:
+  db:
+    image: postgres:18-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: store
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set admin database password}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?Set runtime database password}
+    volumes:
+      - store_data:/var/lib/postgresql
+      - ./backend/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./deploy/02-runtime-role.sh:/docker-entrypoint-initdb.d/02-runtime-role.sh:ro
+    networks: [data]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U postgres -d store']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    shm_size: 128mb
+    logging: &logging
+      driver: json-file
+      options: { max-size: 10m, max-file: "3" }
+
+  backend:
+    build: { context: ., target: backend }
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PGHOST: db
+      PGDATABASE: store
+      PGUSER: store_app
+      PGPASSWORD: ${POSTGRES_APP_PASSWORD}
+      APP_ORIGIN: https://${STORE_DOMAIN:?Set public domain}
+      BACKEND_PROXY_SECRET: ${BACKEND_PROXY_SECRET:?Set proxy secret 32+ characters}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?Set AI API key}
+      STORE_AI_MODEL: ${STORE_AI_MODEL:?Set a model that supports structured outputs}
+      AI_DAILY_LIMIT: ${AI_DAILY_LIMIT:-100}
+      OWNER_TOTP_SECRET: ${OWNER_TOTP_SECRET:?Set Authenticator secret}
+    depends_on: { db: { condition: service_healthy } }
+    networks: [data, app, outbound]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 512m
+    logging: *logging
+
+  frontend:
+    build: { context: ., target: frontend }
+    restart: unless-stopped
+    environment:
+      APP_ORIGIN: https://${STORE_DOMAIN}
+      STORE_BACKEND_URL: http://backend:4000
+      BACKEND_PROXY_SECRET: ${BACKEND_PROXY_SECRET}
+    depends_on: [backend]
+    networks: [app]
+    read_only: true
+    tmpfs: [/tmp, /app/.next/cache]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 768m
+    logging: *logging
+
+  edge:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment: { STORE_DOMAIN: "${STORE_DOMAIN}" }
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [app, outbound]
+    depends_on: [frontend]
+    security_opt: [no-new-privileges:true]
+    logging: *logging
+
+  admin:
+    profiles: [tools]
+    build: { context: ., target: backend }
+    environment:
+      PGHOST: db
+      PGDATABASE: store
+      PGUSER: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      OWNER_USERNAME: ${OWNER_USERNAME:-owner}
+      OWNER_PASSWORD: ${OWNER_PASSWORD:-}
+    networks: [data]
+    depends_on: { db: { condition: service_healthy } }
+    command: [node, backend/admin.mjs, owner]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  store_data:
+  caddy_data:
+  caddy_config:
+networks:
+  data: { internal: true }
+  app: { internal: true }
+  outbound:

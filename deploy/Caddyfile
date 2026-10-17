@@ -1,0 +1,18 @@
+{$STORE_DOMAIN} {
+  encode zstd gzip
+  request_body {
+    max_size 20KB
+  }
+  header {
+    Strict-Transport-Security "max-age=31536000"
+    X-Content-Type-Options nosniff
+    X-Frame-Options DENY
+    Referrer-Policy no-referrer
+    Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    -Server
+  }
+  @legacy path /api/chat
+  respond @legacy 404
+  reverse_proxy frontend:3000
+}
