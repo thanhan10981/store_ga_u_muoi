@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function ready(page: Page) {
   await page.goto("/");
-  await expect(page.getByRole("textbox", { name: "Tin nhắn cho Mạch" })).toBeEnabled();
+  await expect(page.getByRole("textbox", { name: "Tin nhắn cho Gà" })).toBeEnabled();
 }
 
 // Explicitly simulated transport for UI tests; never used by the application.
@@ -45,9 +45,9 @@ test("real local endpoint reports missing key; history, rename, delete and theme
   page.on("pageerror", (e) => consoleErrors.push(e.message));
   await ready(page);
   test.skip(await page.getByRole("button", { name: "Đã cấu hình API" }).isVisible(), "Missing-key test is only run when the server has no key; it must not make a paid API call.");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("Cùng Mạch khám phá");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Cùng Gà khám phá");
   await page.screenshot({ path: "artifacts/desktop.png", fullPage: true, animations: "disabled" });
-  await page.getByRole("textbox", { name: "Tin nhắn cho Mạch" }).fill("Xin chào từ kiểm thử local");
+  await page.getByRole("textbox", { name: "Tin nhắn cho Gà" }).fill("Xin chào từ kiểm thử local");
   await page.getByRole("button", { name: "Gửi tin nhắn" }).click();
   await expect(page.locator(".error-card[role=alert]")).toContainText("Chưa cấu hình API key");
   await expect(page.getByRole("button", { name: "Thử lại", exact: true })).toBeVisible();
@@ -79,7 +79,7 @@ test("simulated streaming appears progressively, renders safe Markdown, forwards
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await mockTransport(page);
   await ready(page);
-  const input = page.getByRole("textbox", { name: "Tin nhắn cho Mạch" });
+  const input = page.getByRole("textbox", { name: "Tin nhắn cho Gà" });
   await input.fill("Tôi tên An");
   await input.press("Enter");
   await expect(page.getByRole("button", { name: "Dừng tạo câu trả lời" })).toBeVisible();
@@ -107,7 +107,7 @@ test("simulated streaming appears progressively, renders safe Markdown, forwards
 test("simulated stop aborts fetch and preserves partial output across reload", async ({ page }) => {
   await mockTransport(page, "slow");
   await ready(page);
-  await page.getByRole("textbox", { name: "Tin nhắn cho Mạch" }).fill("Hãy trả lời chậm");
+  await page.getByRole("textbox", { name: "Tin nhắn cho Gà" }).fill("Hãy trả lời chậm");
   await page.getByRole("button", { name: "Gửi tin nhắn" }).click();
   await expect(page.locator(".markdown")).toContainText("Đang");
   await page.getByRole("button", { name: "Dừng tạo câu trả lời" }).click();
@@ -126,7 +126,7 @@ test("a custom title on an empty conversation survives its first message", async
   await page.getByRole("button", { name: "Đổi tên Cuộc trò chuyện mới" }).click();
   await page.getByRole("textbox", { name: "Tên cuộc trò chuyện" }).fill("Tên do tôi đặt");
   await page.getByRole("button", { name: "Lưu tên" }).click();
-  await page.getByRole("textbox", { name: "Tin nhắn cho Mạch" }).fill("Câu hỏi đầu tiên");
+  await page.getByRole("textbox", { name: "Tin nhắn cho Gà" }).fill("Câu hỏi đầu tiên");
   await page.getByRole("button", { name: "Gửi tin nhắn" }).click();
   await expect(page.getByRole("button", { name: "Tạo lại", exact: true })).toBeVisible();
   await expect(page.locator(".conversation-select")).toHaveText("Tên do tôi đặt");
@@ -135,7 +135,7 @@ test("a custom title on an empty conversation survives its first message", async
 test("simulated failure can be retried without duplicating the user message", async ({ page }) => {
   await mockTransport(page, "error-once");
   await ready(page);
-  await page.getByRole("textbox", { name: "Tin nhắn cho Mạch" }).fill("Thử lại giúp tôi");
+  await page.getByRole("textbox", { name: "Tin nhắn cho Gà" }).fill("Thử lại giúp tôi");
   await page.getByRole("button", { name: "Gửi tin nhắn" }).click();
   await expect(page.locator(".error-card[role=alert]")).toContainText("giới hạn tốc độ");
   await page.getByRole("button", { name: "Thử lại", exact: true }).click();
@@ -155,7 +155,7 @@ test("mobile layout, drawer, prompt, expanding input and dark mode", async ({ pa
   await page.getByRole("button", { name: "Đóng menu", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.getByRole("button", { name: /Cùng lập trình Từ dòng code/ }).click();
-  const input = page.getByRole("textbox", { name: "Tin nhắn cho Mạch" });
+  const input = page.getByRole("textbox", { name: "Tin nhắn cho Gà" });
   await expect(input).toContainText("async/await");
   expect((await input.boundingBox())!.height).toBeGreaterThan(40);
   await input.fill("");
@@ -179,7 +179,7 @@ test("both model choices persist and are forwarded on the next message, includin
   await picker.selectOption("gpt-5.6-luna");
   await page.reload();
   await expect(picker).toHaveValue("gpt-5.6-luna");
-  await page.getByRole("textbox", { name: "Tin nhắn cho Mạch" }).fill("Dùng Luna");
+  await page.getByRole("textbox", { name: "Tin nhắn cho Gà" }).fill("Dùng Luna");
   await page.getByRole("button", { name: "Gửi tin nhắn" }).click();
   await expect(page.locator(".markdown")).toContainText("Đang");
   await expect(picker).toBeDisabled();
@@ -191,7 +191,7 @@ test("both model choices persist and are forwarded on the next message, includin
   await picker.selectOption("gpt-5.6-terra");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(picker).toBeInViewport();
-  await page.getByRole("textbox", { name: "Tin nhắn cho Mạch" }).fill("Dùng Terra");
+  await page.getByRole("textbox", { name: "Tin nhắn cho Gà" }).fill("Dùng Terra");
   await page.getByRole("button", { name: "Gửi tin nhắn" }).click();
   await expect(page.getByRole("button", { name: "Dừng tạo câu trả lời" })).toBeVisible();
   const terra = await page.evaluate(() => (window as typeof window & { testRequests: { model: string }[] }).testRequests[1]);

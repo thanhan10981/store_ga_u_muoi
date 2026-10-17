@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     const client = new OpenAI({ apiKey: connection.apiKey, baseURL: connection.baseURL, maxRetries: 0, timeout: REQUEST_TIMEOUT_MS });
     const stream = await client.responses.create({
       model: model ?? defaultChatModel(process.env.OPENAI_MODEL),
-      instructions: "Bạn là Mạch, trợ lý AI hữu ích. Mặc định trả lời bằng tiếng Việt, rõ ràng và chính xác. Dùng Markdown khi phù hợp. Nói rõ khi không biết; không tự nhận đã tra cứu web hay thực hiện công việc bên ngoài. Không có công cụ truy cập web trong cuộc trò chuyện này.",
+      instructions: "Bạn là Gà, trợ lý AI hữu ích. Mặc định trả lời bằng tiếng Việt, rõ ràng và chính xác. Dùng Markdown khi phù hợp. Nói rõ khi không biết; không tự nhận đã tra cứu web hay thực hiện công việc bên ngoài. Không có công cụ truy cập web trong cuộc trò chuyện này.",
       input: messages,
       max_output_tokens: MAX_OUTPUT_TOKENS,
       reasoning: { effort: provider === "chatmock" ? "low" : "none" },

@@ -212,7 +212,7 @@ export function ChatApp({ configured, model, provider }: { configured: boolean; 
   return <div className="app-shell">
     {sidebarOpen && <button className="sidebar-backdrop" aria-label="Đóng danh sách hội thoại" onClick={() => setSidebarOpen(false)} />}
     <aside ref={sidebarRef} className={`sidebar ${sidebarOpen ? "is-open" : ""}`} aria-label="Danh sách cuộc trò chuyện" role={sidebarOpen ? "dialog" : undefined} aria-modal={sidebarOpen || undefined}>
-      <div className="sidebar-brand"><div className="brand-lockup"><span className="brand-icon"><Brand /></span><span>Mạch<span className="brand-dot">.</span></span></div><button className="icon-button mobile-close" onClick={() => setSidebarOpen(false)} aria-label="Đóng menu"><X size={20} /></button><span className="brand-tag">KHÔNG GIAN AI</span></div>
+      <div className="sidebar-brand"><div className="brand-lockup"><span className="brand-icon"><Brand /></span><span>Gà<span className="brand-dot">.</span></span></div><button className="icon-button mobile-close" onClick={() => setSidebarOpen(false)} aria-label="Đóng menu"><X size={20} /></button><span className="brand-tag">KHÔNG GIAN AI</span></div>
       <button className="new-chat" onClick={createConversation} disabled={busy || !loaded}><Plus size={18} /><span>Cuộc trò chuyện mới</span></button>
       <label className="search-box"><Search size={15} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Tìm cuộc trò chuyện" aria-label="Tìm cuộc trò chuyện" /><kbd>⌕</kbd></label>
       <div className="history-heading"><span>CUỘC TRÒ CHUYỆN</span><span>{workspace.conversations.length.toString().padStart(2, "0")}</span></div>
@@ -234,7 +234,7 @@ export function ChatApp({ configured, model, provider }: { configured: boolean; 
         {messages.length === 0 ? <div className="welcome">
           <div className="welcome-emblem"><Brand /><span className="emblem-dot" /></div>
           <p className="eyebrow">KẾT NỐI Ý TƯỞNG. MỞ LỐI MỖI NGÀY.</p>
-          <h1>Bạn đang nghĩ gì?<br /><span>Cùng Mạch khám phá.</span></h1>
+          <h1>Bạn đang nghĩ gì?<br /><span>Cùng Gà khám phá.</span></h1>
           <p className="welcome-description">Một người bạn để viết, học hỏi và gỡ rối.<br className="desktop-break" /> Bắt đầu từ bất cứ điều gì bạn tò mò.</p>
           <div className="suggestions">{prompts.map(({ icon: Icon, label, caption, prompt }, i) => <button key={label} className={`suggestion suggestion-${i}`} onClick={() => { setInput(prompt); inputRef.current?.focus(); }} disabled={!loaded}>
             <span className="suggestion-top"><span className="suggestion-icon"><Icon size={20} strokeWidth={1.6} /></span><ArrowRight size={16} className="suggestion-arrow" /></span><strong>{label}</strong><span className="suggestion-caption">{caption}</span>
@@ -242,12 +242,12 @@ export function ChatApp({ configured, model, provider }: { configured: boolean; 
           <div className="welcome-footnote"><span />Ý tưởng lớn thường bắt đầu từ một câu hỏi nhỏ.</div>
         </div> : <div className="messages" aria-label="Nội dung cuộc trò chuyện" aria-busy={busy}>
           <div className="chat-date"><span />{new Date(active?.createdAt ?? 0).toLocaleDateString("vi-VN", { day: "numeric", month: "long", year: "numeric" })}<span /></div>
-          {messages.map((message, index) => <article key={message.id} className={`message message-${message.role}`} aria-label={message.role === "user" ? "Tin nhắn của bạn" : "Phản hồi của Mạch"}>
+          {messages.map((message, index) => <article key={message.id} className={`message message-${message.role}`} aria-label={message.role === "user" ? "Tin nhắn của bạn" : "Phản hồi của Gà"}>
             {message.role === "assistant" && <div className="assistant-avatar"><Brand /></div>}
-            <div className="message-content"><div className="message-author">{message.role === "user" ? "Bạn" : "Mạch"}{message.role === "assistant" && <span>AI</span>}</div>
+            <div className="message-content"><div className="message-author">{message.role === "user" ? "Bạn" : "Gà"}{message.role === "assistant" && <span>AI</span>}</div>
               {message.role === "user" ? <div className="user-bubble">{message.content}</div> : <>
                 {message.content && <Markdown content={message.content} />}
-                {message.status === "streaming" && <div className="typing" role="status"><span /><span /><span /><small>{message.content ? "Đang viết tiếp" : "Mạch đang suy nghĩ"}</small></div>}
+                {message.status === "streaming" && <div className="typing" role="status"><span /><span /><span /><small>{message.content ? "Đang viết tiếp" : "Gà đang suy nghĩ"}</small></div>}
                 {message.status === "stopped" && <p className="stopped-label">Đã dừng tạo câu trả lời.</p>}
                 {message.status === "error" && <div className="error-card" role="alert"><strong>{message.error?.code === "MISSING_API_KEY" ? "Thêm API key để bắt đầu" : "Chưa thể hoàn tất câu trả lời"}</strong><p>{message.error?.message}</p></div>}
                 {message.status !== "streaming" && <div className="message-tools">{message.content && <CopyButton text={message.content} compact label="Sao chép câu trả lời" />}{index === messages.length - 1 && <button className="retry-button" disabled={busy} onClick={() => void send(messages[index - 1]?.content || "", index)}><RotateCcw size={13} />{message.status === "complete" ? "Tạo lại" : "Thử lại"}</button>}</div>}
@@ -259,11 +259,11 @@ export function ChatApp({ configured, model, provider }: { configured: boolean; 
 
       <div className="composer-area">
         {!nearBottom && <button className="scroll-bottom" onClick={() => { const el = scrollerRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); atBottom.current = true; setNearBottom(true); }} aria-label="Cuộn đến tin nhắn mới nhất"><ArrowDown size={17} />Tin nhắn mới nhất</button>}
-        <div className="composer-wrap"><form className="composer" onSubmit={submit}><label className="sr-only" htmlFor="chat-input">Tin nhắn cho Mạch</label><textarea id="chat-input" ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={keyDown} placeholder="Hỏi Mạch bất cứ điều gì…" maxLength={MAX_MESSAGE_CHARS} rows={1} disabled={!loaded} />
+        <div className="composer-wrap"><form className="composer" onSubmit={submit}><label className="sr-only" htmlFor="chat-input">Tin nhắn cho Gà</label><textarea id="chat-input" ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={keyDown} placeholder="Hỏi Gà bất cứ điều gì…" maxLength={MAX_MESSAGE_CHARS} rows={1} disabled={!loaded} />
           <div className="composer-bottom"><span className="composer-hint"><span className="hint-spark">✳</span><span>{busy ? "Một chút nữa, ý tưởng đang thành hình…" : "Cứ tự nhiên, bắt đầu bằng một câu hỏi."}</span></span><div className="composer-controls">{input.length > 5000 && <span className="char-count">{input.length}/6000</span>}{busy ? <button type="button" className="send-button stop-button" onClick={stop} aria-label="Dừng tạo câu trả lời"><Square size={15} fill="currentColor" /></button> : <button className="send-button" type="submit" disabled={!loaded || !input.trim()} aria-label="Gửi tin nhắn"><ArrowUp size={20} /></button>}</div></div>
-        </form><div className="composer-footer"><span>Mạch có thể mắc lỗi. Hãy kiểm tra thông tin quan trọng.</span><span className="keyboard-hint"><kbd>Enter</kbd> để gửi · <kbd>Shift + Enter</kbd> xuống dòng</span></div></div>
+        </form><div className="composer-footer"><span>Gà có thể mắc lỗi. Hãy kiểm tra thông tin quan trọng.</span><span className="keyboard-hint"><kbd>Enter</kbd> để gửi · <kbd>Shift + Enter</kbd> xuống dòng</span></div></div>
       </div>
-      <div className="screen-reader-status" role="status" aria-live="polite">{busy ? "Mạch đang tạo câu trả lời" : messages.length ? "Đã kết thúc phản hồi" : "Sẵn sàng trò chuyện"}</div>
+      <div className="screen-reader-status" role="status" aria-live="polite">{busy ? "Gà đang tạo câu trả lời" : messages.length ? "Đã kết thúc phản hồi" : "Sẵn sàng trò chuyện"}</div>
     </main>
 
     <dialog ref={dialogRef} className="modal" onCancel={() => setDialog(null)} onClick={(e) => { if (e.target === e.currentTarget) setDialog(null); }}><form onSubmit={confirmDialog}>
@@ -273,7 +273,7 @@ export function ChatApp({ configured, model, provider }: { configured: boolean; 
     </form></dialog>
     <dialog ref={settingsRef} className="modal settings-modal" onCancel={() => setSettingsOpen(false)} onClick={(e) => { if (e.target === e.currentTarget) setSettingsOpen(false); }}>
       <div className="modal-heading"><h2>Không gian của bạn</h2><button className="icon-button" aria-label="Đóng thông tin" onClick={() => setSettingsOpen(false)}><X size={19} /></button></div>
-      <div className="settings-section"><ShieldCheck size={22} /><div><h3>{provider === "chatmock" ? "Kết nối qua ChatMock local" : configured ? "API key đã được cấu hình" : "Cần cấu hình API key"}</h3><p>{provider === "chatmock" ? "Mạch gửi yêu cầu tới ChatMock trên máy này. ChatMock dùng phiên đăng nhập ChatGPT riêng để tạo câu trả lời. Nếu báo chưa đăng nhập, chạy python ChatMock-main/chatmock.py login. Không dán token vào cuộc trò chuyện. Nhãn kết nối cho biết nguồn đã chọn, không xác nhận phiên đăng nhập còn hiệu lực." : configured ? "Key chỉ được đọc trên server. Trạng thái này chưa xác minh quyền truy cập hoặc số dư OpenAI." : "Thêm key trực tiếp vào file .env.local tại thư mục dự án rồi khởi động lại server. Không dán key vào cuộc trò chuyện."}</p><code>AI_PROVIDER={provider}<br />{provider === "openai" && <>OPENAI_API_KEY=…<br /></>}OPENAI_MODEL={model}</code></div></div>
+      <div className="settings-section"><ShieldCheck size={22} /><div><h3>{provider === "chatmock" ? "Kết nối qua ChatMock local" : configured ? "API key đã được cấu hình" : "Cần cấu hình API key"}</h3><p>{provider === "chatmock" ? "Gà gửi yêu cầu tới ChatMock trên máy này. ChatMock dùng phiên đăng nhập ChatGPT riêng để tạo câu trả lời. Nếu báo chưa đăng nhập, chạy python ChatMock-main/chatmock.py login. Không dán token vào cuộc trò chuyện. Nhãn kết nối cho biết nguồn đã chọn, không xác nhận phiên đăng nhập còn hiệu lực." : configured ? "Key chỉ được đọc trên server. Trạng thái này chưa xác minh quyền truy cập hoặc số dư OpenAI." : "Thêm key trực tiếp vào file .env.local tại thư mục dự án rồi khởi động lại server. Không dán key vào cuộc trò chuyện."}</p><code>AI_PROVIDER={provider}<br />{provider === "openai" && <>OPENAI_API_KEY=…<br /></>}OPENAI_MODEL={model}</code></div></div>
       <div className="settings-section"><Monitor size={22} /><div><h3>Lịch sử trên thiết bị này</h3><p>Hội thoại được lưu trong trình duyệt hiện tại, chưa đồng bộ giữa các thiết bị. Tối đa 50 hội thoại, 200 tin mỗi hội thoại; mục cũ nhất sẽ được loại bỏ khi vượt giới hạn. Xóa dữ liệu trình duyệt sẽ xóa lịch sử.</p><p>Khi gửi tin nhắn, nội dung cùng một phần lịch sử gần nhất được gửi tới OpenAI để tạo câu trả lời.</p></div></div>
       <button className="button-primary settings-done" onClick={() => setSettingsOpen(false)}>Đã hiểu<Check size={16} /></button>
     </dialog>

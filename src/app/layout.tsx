@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Mạch — Khơi mở ý tưởng",
+  title: "Gà — Khơi mở ý tưởng",
   description: "Không gian trò chuyện cùng AI bằng tiếng Việt. Viết, học hỏi, lập trình và khám phá ý tưởng mỗi ngày.",
   robots: { index: false, follow: false },
 };
