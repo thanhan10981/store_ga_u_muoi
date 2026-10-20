@@ -5,10 +5,13 @@ export async function provisionRuntime(pool, password) {
   try {
     await connection.query('BEGIN');
     await connection.query("SELECT pg_advisory_xact_lock(hashtext('store:runtime-role'))");
-    const existing = await connection.query("SELECT 1 FROM pg_roles WHERE rolname='store_app'");
+    const existing = await connection.query("SELECT rolsuper FROM pg_roles WHERE rolname='store_app'");
+    if (existing.rows[0]?.rolsuper) throw Object.assign(new Error('Refusing to provision a superuser runtime role.'), { code: 'UNSAFE_RUNTIME_ROLE' });
     // Server-side identifier/literal quoting, never shell interpolation of credentials.
     const statement = await connection.query(existing.rowCount
-      ? "SELECT format('ALTER ROLE store_app LOGIN PASSWORD %L NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS', $1::text) AS sql"
+      // Managed admins cannot ALTER the SUPERUSER attribute, even to false.
+      // The existing role was checked above; keep its non-superuser status intact.
+      ? "SELECT format('ALTER ROLE store_app LOGIN PASSWORD %L NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS', $1::text) AS sql"
       : "SELECT format('CREATE ROLE store_app LOGIN PASSWORD %L NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS', $1::text) AS sql", [password]);
     await connection.query(statement.rows[0].sql);
     const database = await connection.query("SELECT format('GRANT CONNECT ON DATABASE %I TO store_app', current_database()) AS sql");

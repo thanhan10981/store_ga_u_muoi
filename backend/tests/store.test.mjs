@@ -143,7 +143,11 @@ test('deployed runtime grants permit confirmation/report and prohibit changing c
   await assert.rejects(provisionRuntime(pool, 'short'), /32 characters/);
   // Existing-role path is idempotent, including safe quoting of a password with apostrophes.
   await provisionRuntime(pool, "test-only-long-password-with-'quotes'-123456789");
-  await provisionRuntime(pool, 'test-only-rotated-password-1234567890');
+  const managedPool = { connect: async () => ({ release() {}, query: async (sql, args) => {
+    if (/^ALTER ROLE store_app\b.*\bNOSUPERUSER\b/.test(sql)) throw Object.assign(new Error('Managed admin cannot alter SUPERUSER attribute'), { code: '42501' });
+    return pg.query(sql, args);
+  } }) };
+  await provisionRuntime(managedPool, 'test-only-rotated-password-1234567890');
   const id = await draft(data('purchase', 1));
   await pg.exec('SET ROLE store_app');
   try {

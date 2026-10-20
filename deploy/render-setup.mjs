@@ -3,19 +3,29 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { db } from '../backend/db.mjs';
 import { provisionRuntime } from './render-runtime.mjs';
+import { validateSetup, setupFailure } from './setup-diagnostics.mjs';
 
+let stage = 'kiểm tra cấu hình';
 try {
-  if (!process.env.DATABASE_URL || !process.env.OWNER_USERNAME || !process.env.OWNER_PASSWORD) throw new Error('Set admin DATABASE_URL, OWNER_USERNAME and OWNER_PASSWORD in .env.render-admin.');
-  const url = new URL(process.env.DATABASE_URL);
-  if (url.searchParams.get('sslmode') !== 'verify-full') throw new Error('Database connection requires ?sslmode=verify-full.');
-  if (url.hostname.includes('-pooler.')) throw new Error('Use the direct database hostname, not the transaction pooler.');
+  validateSetup(process.env);
+  console.log('Cấu hình hợp lệ (không hiển thị thông tin bí mật).');
+  if (process.argv.includes('--check')) process.exitCode = 0;
+  else {
+  stage = 'kết nối database';
+  await db.query('SELECT 1');
+  console.log('Kết nối database thành công.');
+  stage = 'tạo schema';
   await db.query(await readFile(new URL('../backend/schema.sql', import.meta.url), 'utf8'));
+  stage = 'cấp quyền store_app';
   await provisionRuntime(db, process.env.STORE_APP_PASSWORD);
-  const owner = spawnSync(process.execPath, [fileURLToPath(new URL('../backend/admin.mjs', import.meta.url)), 'owner'], { stdio: 'inherit', env: process.env });
+  stage = 'tạo tài khoản chủ';
+  const owner = spawnSync(process.execPath, [fileURLToPath(new URL('../backend/admin.mjs', import.meta.url)), 'owner'], { stdio: 'pipe', env: process.env });
+  if (owner.error) throw owner.error;
   if (owner.status !== 0) throw new Error('Owner setup failed.');
   console.log('Schema, runtime role and owner ready. Use store_app for the API; protect the local admin env file and restrict database network access where available.');
-} catch {
+  }
+} catch (error) {
   // Connection errors and SQL statements can include credentials. Never print the raw error.
-  console.error('Render setup failed. Check required variables, TLS/network access and admin role permissions. Do not use the admin connection for the API.');
+  console.error(stage === 'kiểm tra cấu hình' ? error.message : setupFailure(stage, error));
   process.exitCode = 1;
 } finally { await db.end(); }
