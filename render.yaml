@@ -20,7 +20,7 @@ services:
         generateValue: true
       - key: DATABASE_URL
         sync: false
-      - key: OPENAI_API_KEY
+      - key: AI_PROVIDER
         sync: false
       - key: STORE_AI_MODEL
         sync: false

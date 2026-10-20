@@ -9,6 +9,7 @@ dist/
 !.env.vercel.example
 !.env.render-admin.example
 !.env.render.example
+!.env.chatmock-gateway.example
 backups/
 *.dump
 *.tsbuildinfo

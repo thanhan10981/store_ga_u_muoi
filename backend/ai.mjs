@@ -1,8 +1,8 @@
-import OpenAI from 'openai';
 import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { db, report } from './db.mjs';
 import { HttpError, parseReceipt, todayVN } from './domain.mjs';
+import { createStoreAI } from './ai-provider.mjs';
 
 // Model output has no database capabilities. Only the validated plan below is interpreted.
 const planSchema = z.object({
@@ -13,11 +13,7 @@ const planSchema = z.object({
   query: z.object({ from: z.string(), to: z.string(), bucket: z.enum(['day','month','year']), item: z.string() }).strict().nullable(),
 }).strict();
 
-function ai() {
-  if (!process.env.OPENAI_API_KEY || !process.env.STORE_AI_MODEL) throw new HttpError(503, 'Backend chưa được cấu hình OPENAI_API_KEY và STORE_AI_MODEL.');
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0, timeout: 45000 });
-}
-export async function chat(ownerId, message, { pool = db, client = ai() } = {}) {
+export async function chat(ownerId, message, { pool = db, client = createStoreAI() } = {}) {
   const history = await pool.query(`SELECT role,content FROM (SELECT id,role,content FROM chat_messages WHERE owner_id=$1 ORDER BY id DESC LIMIT 12) t ORDER BY id`, [ownerId]);
   const pending = await pool.query("SELECT id,payload FROM drafts WHERE owner_id=$1 AND status='pending' AND expires_at>now() ORDER BY created_at DESC LIMIT 1", [ownerId]);
   const response = await client.responses.create({

@@ -15,7 +15,8 @@
     "backend:migrate": "node --env-file-if-exists=.env.backend backend/admin.mjs migrate",
     "backend:owner": "node --env-file-if-exists=.env.backend backend/admin.mjs owner",
     "test:backend": "node --test backend/tests/*.test.mjs",
-    "render:setup": "node --env-file=.env.render-admin deploy/render-setup.mjs"
+    "render:setup": "node --env-file=.env.render-admin deploy/render-setup.mjs",
+    "chatmock:gateway": "node --env-file=.env.chatmock-gateway backend/chatmock-gateway.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.577.0",

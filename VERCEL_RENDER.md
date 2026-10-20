@@ -20,7 +20,7 @@ Render → New → Blueprint → chọn cùng repo, dùng `render.yaml`. File t�
 
 Giới hạn Free theo [Render](https://render.com/docs/free): backend ngủ sau 15 phút không có traffic, lần gọi đầu có thể chờ khoảng một phút; PostgreSQL Free giới hạn 1 GB, mỗi workspace chỉ có một DB Free và **hết hạn sau 30 ngày**. DB hết hạn không truy cập được; nếu không nâng cấp, dữ liệu sẽ bị xóa sau thời gian gia hạn 14 ngày. Cần xuất dữ liệu trước hạn hoặc chuyển database sang nơi khác nếu muốn tiếp tục miễn phí; đây không phải PostgreSQL miễn phí lâu dài. Backend ngủ có thể khiến lần đăng nhập/chat đầu timeout, hãy chờ backend thức rồi thử lại; không tự retry thao tác xác nhận giao dịch.
 
-Gói hosting Free không làm API OpenAI miễn phí; API key backend vẫn có chi phí/hạn mức riêng. Không publish ChatMock local để thay thế cấu hình API này.
+Gói hosting Free không làm API OpenAI miễn phí; API key backend vẫn có chi phí/hạn mức riêng. Để dùng ChatMock trên máy qua gateway có khóa, xem [CHATMOCK_STORE.md](CHATMOCK_STORE.md).
 
 Điền các giá trị Render yêu cầu:
 

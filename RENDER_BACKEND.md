@@ -1,5 +1,7 @@
 # Backend Render Free + PostgreSQL Neon
 
+Backend đã hỗ trợ **ChatMock** qua gateway có khóa. Nếu dùng ChatMock thay API OpenAI, làm theo [CHATMOCK_STORE.md](CHATMOCK_STORE.md): đặt AI_PROVIDER=chatmock, URL HTTPS tunnel và khóa gateway; không cần OPENAI_API_KEY. Các bước database và đăng nhập bên dưới giữ nguyên.
+
 Đây là cấu hình backend hiện tại. `render.yaml` chỉ tạo **một Web Service Free**, không tạo database Render. Phần frontend chưa đổi nền tảng trong bước này.
 
 ## 1. Tạo database Neon trước

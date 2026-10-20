@@ -1,5 +1,12 @@
 # Kết quả xác minh quản lý cửa hàng — 17/10/2026
 
+## Cập nhật ChatMock — 20/10/2026
+
+- Backend có AI_PROVIDER=openai/chatmock. ChatMock dùng dummy SDK key, local loopback hoặc HTTPS gateway có khóa; không chuyển OpenAI API key thật sang gateway, không theo redirect.
+- Thêm gateway localhost:8001 với khóa riêng và allowlist endpoint. Không mở trực tiếp ChatMock ra Internet. JSON lập phiếu vẫn được validate trước mọi transaction.
+- 16 test backend đã qua, gồm kiểm thử transport SDK, chặn truy cập gateway, giới hạn phản hồi và nghiệp vụ cửa hàng.
+- Chưa kiểm tra ChatMock thật/tunnel Render: probe local báo ChatMock chưa chạy; cloudflared chưa có trên máy. Không thay đổi secret/cấu hình tài khoản đang deploy.
+
 ## Cập nhật đăng nhập
 
 - Vercel luôn hiển thị luồng đăng nhập ở `/`, kể cả khi chưa cấu hình Render; thêm `/login`. Chat local cũ vẫn dùng được khi phát triển local, API chat cũ bị tắt trên Vercel.
