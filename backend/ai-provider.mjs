@@ -59,7 +59,12 @@ export function createStoreAI(env = process.env) {
       return result;
     } catch (error) {
       if (error instanceof HttpError) throw error;
-      if (config.provider !== 'chatmock') throw error;
+      if (config.provider !== 'chatmock') {
+        if (error.status === 401 || error.status === 403) throw new HttpError(503, 'Backend đang dùng OpenAI nhưng API key không hợp lệ. Nếu dùng ChatMock, đặt AI_PROVIDER=chatmock trên Render rồi redeploy.');
+        if (error.status === 404) throw new HttpError(503, 'Model OpenAI không khả dụng. Kiểm tra STORE_AI_MODEL hoặc chuyển AI_PROVIDER=chatmock nếu bạn dùng ChatMock.');
+        if (error.status === 429) throw new HttpError(429, 'OpenAI báo hết hạn mức hoặc giới hạn tốc độ. Kiểm tra tài khoản API hoặc chọn provider ChatMock.');
+        throw new HttpError(503, 'Không hoàn tất được yêu cầu OpenAI. Kiểm tra provider, model và kết nối backend.');
+      }
       if (error.status === 401) throw new HttpError(503, 'Phiên ChatMock hết hạn. Đăng nhập lại ChatMock trên máy đang chạy.');
       if (error.status === 403) throw new HttpError(503, 'Khóa ChatMock gateway không khớp. Kiểm tra CHATMOCK_GATEWAY_SECRET hai bên.');
       if (error.status === 429 || error.status === 409) throw new HttpError(429, 'ChatMock đang bận hoặc hết hạn mức. Hãy đợi rồi thử lại.');

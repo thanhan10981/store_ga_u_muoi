@@ -48,7 +48,7 @@ test('real SDK transport sends only dummy auth to ChatMock and bounds errors and
   const original = globalThis.fetch; let mode = 'ok'; let captured;
   globalThis.fetch = async (input, options) => {
     captured = { input, options };
-    if (mode === 'forbidden') return Response.json({ error: { message: 'internal secret must not be exposed' } }, { status: 403 });
+    if (mode === 'forbidden' || mode === 'unauthorized') return Response.json({ error: { message: 'internal secret must not be exposed' } }, { status: mode === 'forbidden' ? 403 : 401 });
     if (mode === 'large') return new Response('x'.repeat(2 * 1024 * 1024 + 1));
     return Response.json({ id: 'test', object: 'response', status: 'completed', output: [{ type: 'message', role: 'assistant', status: 'completed', content: [{ type: 'output_text', text: '{"test":true}', annotations: [] }] }] });
   };
@@ -62,5 +62,8 @@ test('real SDK transport sends only dummy auth to ChatMock and bounds errors and
     assert.match(JSON.parse(captured.options.body).instructions, /"type":"object"/);
     mode = 'forbidden'; await assert.rejects(client.responses.create({ model: 'test', input: 'test' }), error => error.status === 503 && !error.message.includes('internal secret'));
     mode = 'large'; await assert.rejects(client.responses.create({ model: 'test', input: 'test' }));
+    const official = createStoreAI({ AI_PROVIDER: 'openai', STORE_AI_MODEL: 'test', OPENAI_API_KEY: 'test-only' });
+    mode = 'unauthorized';
+    await assert.rejects(official.responses.create({ model: 'test', input: 'test' }), error => error.status === 503 && error.message.includes('AI_PROVIDER=chatmock') && !error.message.includes('internal secret'));
   } finally { globalThis.fetch = original; }
 });

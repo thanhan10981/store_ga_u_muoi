@@ -39,6 +39,7 @@ export function createStoreServer({ database = db, chatHandler = chat } = {}) {
   const active = new Set();
   const server = createServer(async (req, res) => {
     const requestId = randomUUID();
+    let stage = 'request';
     const send = (status, value, headers = {}) => { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'X-Request-Id': requestId, ...headers }); res.end(JSON.stringify(value)); };
     try {
       // Render probes this endpoint without the private proxy key. No store data is exposed.
@@ -91,6 +92,7 @@ export function createStoreServer({ database = db, chatHandler = chat } = {}) {
         return send(200, { ok: true }, { 'Set-Cookie': cookie('', 0) });
       }
       if (path === '/api/store/chat') {
+        stage = 'chat.rate_limit';
         const { message } = z.object({ message: z.string().trim().min(1).max(6000) }).strict().parse(data);
         await rateLimit(pool, `ai:minute:${user.owner_id}`, 10);
         await rateLimit(pool, `ai:day:${user.owner_id}`, dailyLimit, 86400);
@@ -100,11 +102,13 @@ export function createStoreServer({ database = db, chatHandler = chat } = {}) {
         let lock;
         let acquired = false;
         try {
+        stage = 'chat.lock';
           lock = await pool.connect();
           const held = await lock.query('SELECT pg_try_advisory_lock(hashtext($1)) AS acquired', [`chat:${user.owner_id}`]);
           acquired = held.rows[0].acquired;
           if (!acquired) throw new HttpError(409, 'Đang xử lý yêu cầu trước.');
-          return send(200, await chatHandler(user.owner_id, message));
+        stage = 'chat.ai';
+        return send(200, await chatHandler(user.owner_id, message));
         } finally {
           try { if (acquired) await lock.query('SELECT pg_advisory_unlock(hashtext($1))', [`chat:${user.owner_id}`]); }
           finally { lock?.release(); active.delete(user.owner_id); }
@@ -122,7 +126,9 @@ export function createStoreServer({ database = db, chatHandler = chat } = {}) {
       throw new HttpError(404, 'Không tìm thấy API.');
     } catch (error) {
       const status = error instanceof HttpError ? error.status : error instanceof z.ZodError ? 422 : 503;
-      if (status === 503) console.error(JSON.stringify({ requestId, event: 'request_failed', code: typeof error.code === 'string' ? error.code : 'UPSTREAM_OR_DATABASE' }));
+      if (status === 503) console.error(JSON.stringify({ requestId, event: 'request_failed', stage,
+        aiProvider: ['openai','chatmock'].includes(process.env.AI_PROVIDER?.trim() || 'openai') ? process.env.AI_PROVIDER?.trim() || 'openai' : 'invalid',
+        code: typeof error.code === 'string' && /^[A-Z0-9_]{2,40}$/.test(error.code) ? error.code : error instanceof HttpError ? 'APPLICATION_ERROR' : 'UPSTREAM_OR_DATABASE' }));
       send(status, { error: error instanceof HttpError ? error.message : status === 422 ? 'Dữ liệu không hợp lệ.' : 'Dịch vụ tạm thời không khả dụng. Chưa thể xác nhận kết quả; hãy tải lại phiếu trước khi thử lại.', requestId }, status === 429 ? { 'Retry-After': '300' } : {});
     }
   });
