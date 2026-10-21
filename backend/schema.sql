@@ -39,6 +39,17 @@ CREATE TABLE IF NOT EXISTS receipt_lines (
   unit_price bigint NOT NULL CHECK (unit_price >= 0),
   amount bigint GENERATED ALWAYS AS (round(quantity * unit_price)::bigint) STORED
 );
+ALTER TABLE products ADD COLUMN IF NOT EXISTS archived boolean NOT NULL DEFAULT false;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS revision bigint NOT NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS inventory_changes (
+  id uuid PRIMARY KEY, owner_id uuid NOT NULL REFERENCES owners(id),
+  draft_id uuid UNIQUE NOT NULL REFERENCES drafts(id), product_id uuid NOT NULL REFERENCES products(id),
+  business_date date NOT NULL, delta numeric(15,3) NOT NULL,
+  operation text NOT NULL CHECK(operation IN ('set_stock','rename_product','archive_product','restore_product')),
+  before_state jsonb NOT NULL, after_state jsonb NOT NULL, reason text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS inventory_changes_product ON inventory_changes(product_id,business_date);
 CREATE TABLE IF NOT EXISTS audit_events (
   id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   owner_id uuid NOT NULL REFERENCES owners(id), action text NOT NULL,

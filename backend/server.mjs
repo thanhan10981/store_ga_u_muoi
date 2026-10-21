@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { z } from 'zod';
 import { db, assertRuntimeRole, confirmDraft, report } from './db.mjs';
 import { chat } from './ai.mjs';
+import { CHAT_BODY_LIMIT, chatRequestSchema, validateAttachments } from './attachments.mjs';
 import { HttpError, requireOrigin } from './domain.mjs';
 import { hashToken, token, safeEqual, verifyPassword, verifyTotp, rateLimit } from './security.mjs';
 
@@ -19,10 +20,10 @@ export function createStoreServer({ database = db, chatHandler = chat } = {}) {
   if (!Number.isSafeInteger(dailyLimit) || dailyLimit < 1 || dailyLimit > 10000) throw new Error('AI_DAILY_LIMIT phải từ 1 đến 10000.');
   const cookieName = production ? '__Host-store_session' : 'store_session';
   function cookie(value, age) { return `${cookieName}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${age}${production ? '; Secure' : ''}`; }
-  async function body(req) {
+  async function body(req, limit = 16384) {
     if (req.headers['content-type']?.split(';')[0].trim() !== 'application/json') throw new HttpError(415, 'Yêu cầu cần JSON.');
     let size = 0; const chunks = [];
-    for await (const chunk of req) { size += chunk.length; if (size > 16384) throw new HttpError(413, 'Yêu cầu quá lớn.'); chunks.push(chunk); }
+    for await (const chunk of req) { size += chunk.length; if (size > limit) throw new HttpError(413, 'Yêu cầu quá lớn.'); chunks.push(chunk); }
     try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); }
     catch { throw new HttpError(400, 'JSON không hợp lệ.'); }
   }
@@ -86,14 +87,15 @@ export function createStoreServer({ database = db, chatHandler = chat } = {}) {
       }
       if (req.method !== 'POST') throw new HttpError(404, 'Không tìm thấy API.');
       if (!safeEqual(req.headers['x-csrf-token'], user.csrf)) throw new HttpError(403, 'Phiên xác nhận không hợp lệ. Hãy tải lại trang.');
-      const data = await body(req);
+      const data = await body(req, path === '/api/store/chat' ? CHAT_BODY_LIMIT : 16384);
       if (path === '/api/store/logout') {
         await pool.query('DELETE FROM sessions WHERE token_hash=$1', [hashToken(sessionToken(req))]);
         return send(200, { ok: true }, { 'Set-Cookie': cookie('', 0) });
       }
       if (path === '/api/store/chat') {
         stage = 'chat.rate_limit';
-        const { message } = z.object({ message: z.string().trim().min(1).max(6000) }).strict().parse(data);
+        const { message, attachments } = chatRequestSchema.parse(data);
+        validateAttachments(attachments);
         await rateLimit(pool, `ai:minute:${user.owner_id}`, 10);
         await rateLimit(pool, `ai:day:${user.owner_id}`, dailyLimit, 86400);
         // Cross-process lock, not just an in-memory flag. Dedicated DB connection holds it during AI calls.
@@ -108,7 +110,7 @@ export function createStoreServer({ database = db, chatHandler = chat } = {}) {
           acquired = held.rows[0].acquired;
           if (!acquired) throw new HttpError(409, 'Đang xử lý yêu cầu trước.');
         stage = 'chat.ai';
-        return send(200, await chatHandler(user.owner_id, message));
+        return send(200, await chatHandler(user.owner_id, message, { attachments }));
         } finally {
           try { if (acquired) await lock.query('SELECT pg_advisory_unlock(hashtext($1))', [`chat:${user.owner_id}`]); }
           finally { lock?.release(); active.delete(user.owner_id); }

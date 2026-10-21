@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { LoginPage } from "./login-page";
+import { StoreAttachments, useAttachmentPicker, type ChatAttachment } from "./store-attachments";
+import { InventoryReview, inventoryLabels, type InventoryPayload } from "./inventory-review";
 import { StoreToastStack, type ToastItem } from "./store-toast";
 import "./store.css";
 
 type Line = { name: string; unit: string; quantity: number; unitPrice: number };
-type Draft = { id: string; payload: { kind: string; date: string; note: string; lines: Line[] } };
+type Draft = { id: string; payload: { type?: "receipt"; kind: string; date: string; note: string; lines: Line[] } | InventoryPayload };
 type Report = {
   revenue: string; purchases: string; expenses: string; cashDifference: string; note: string;
   query: { from: string; to: string; item: string; bucket: string };
@@ -40,6 +42,8 @@ export function StoreApp() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [report, setReport] = useState<Report | null>(null);
   const [input, setInput] = useState("");
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  const [dragging, setDragging] = useState(false);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [bucket, setBucket] = useState("day");
@@ -58,6 +62,7 @@ export function StoreApp() {
   const setError = useCallback((msg: string) => {
     if (msg) addToast("error", msg, "Lỗi thao tác");
   }, [addToast]);
+  const picker = useAttachmentPicker(attachments, setAttachments, setError);
 
   function setNotice(msg: string) {
     if (msg) addToast("notice", msg, "Thông báo hệ thống");
@@ -75,7 +80,7 @@ export function StoreApp() {
   async function api(path: string, body: unknown) {
     const response = await fetch(`/api/store/${path}`, { method: "POST", headers: { "Content-Type": "application/json", "x-csrf-token": user?.csrf ?? "" }, body: JSON.stringify(body) });
     const data = await response.json();
-    if (response.status === 401) { setUser(null); setMessages([]); setDraft(null); setReport(null); }
+    if (response.status === 401) { setUser(null); setMessages([]); setDraft(null); setReport(null); setAttachments([]); }
     if (!response.ok) throw new Error(typeof data.error === "string" ? data.error : "Yêu cầu không thành công.");
     return data;
   }
@@ -88,12 +93,13 @@ export function StoreApp() {
   }
 
   function send(event: FormEvent) {
-    event.preventDefault(); if (!input.trim()) return;
+    event.preventDefault(); if (picker.reading || (!input.trim() && !attachments.length)) return;
     const message = input.trim();
     void run(async () => {
-      const result = await api("chat", { message });
-      setMessages(old => [...old, { role: "user", content: message }, { role: "assistant", content: result.answer }]);
-      setInput("");
+      const result = await api("chat", { message, attachments });
+      const sent = `${message || "Đọc tệp đính kèm"}${attachments.length ? `\n[Đính kèm: ${attachments.map(file => file.name).join(", ")}]` : ""}`;
+      setMessages(old => [...old, { role: "user", content: sent }, { role: "assistant", content: result.answer }]);
+      setInput(""); setAttachments([]);
       if (result.draft) setDraft(result.draft);
       if (result.report) setReport(result.report);
     });
@@ -125,13 +131,14 @@ export function StoreApp() {
           <div className="store-account">
             <span className="store-user"><span className="store-avatar">{user.username.slice(0, 1).toUpperCase()}</span>{user.username}</span>
             <button
-              disabled={busy}
+              disabled={busy || picker.reading}
               onClick={() => void run(async () => {
                 await api("logout", {});
                 setUser(null);
                 setDraft(null);
                 setMessages([]);
                 setReport(null);
+                setAttachments([]);
                 setNotice("Đã đăng xuất tài khoản.");
               })}
             >
@@ -154,7 +161,7 @@ export function StoreApp() {
         </section>
         <nav className="store-overview" aria-label="Lối tắt cửa hàng">
           <a href="#store-chat"><span className="store-tile-index">01 / HỘI THOẠI</span><strong>Trợ lý cửa hàng <span>↗</span></strong><small>{messages.length ? `${messages.length} tin nhắn trong sổ trò chuyện` : "Nhập hàng, ghi bán và hỏi về cửa hàng"}</small></a>
-          <a href="#store-draft"><span className="store-tile-index">02 / CHỜ XÁC NHẬN</span><strong>{draft ? "Có phiếu cần kiểm tra" : "Sổ sách đã sẵn sàng"}<span>↗</span></strong><small>{draft ? `${labels[draft.payload.kind]} · ${draft.payload.lines.length} mặt hàng` : "Chỉ ghi sổ khi bạn xác nhận phiếu"}</small></a>
+          <a href="#store-draft"><span className="store-tile-index">02 / CHỜ XÁC NHẬN</span><strong>{draft ? "Có phiếu cần kiểm tra" : "Sổ sách đã sẵn sàng"}<span>↗</span></strong><small>{draft ? draft.payload.type === "inventory" ? inventoryLabels[draft.payload.operation] : `${labels[draft.payload.kind]} · ${draft.payload.lines.length} mặt hàng` : "Chỉ ghi sổ khi bạn xác nhận phiếu"}</small></a>
           <a href="#store-reports"><span className="store-tile-index">03 / BÁO CÁO</span><strong>Hiểu những con số <span>↗</span></strong><small>{report ? `${report.query.from} → ${report.query.to}` : "Doanh thu, chi phí và tồn kho thực tế"}</small></a>
         </nav>
         <div className="store-grid">
@@ -179,6 +186,7 @@ export function StoreApp() {
             <div id="store-draft" />
             {draft && (
               <section className="store-draft">
+                {draft.payload.type === "inventory" ? <InventoryReview payload={draft.payload} /> : <>
                 <span className="store-eyebrow">PHIẾU NHÁP · CHƯA GHI SỔ</span>
                 <h3>{labels[draft.payload.kind]} · {draft.payload.date}</h3>
                 <div className="store-table-wrap">
@@ -201,14 +209,15 @@ export function StoreApp() {
                 <p><strong>Tổng: {money(draft.payload.lines.reduce((s, l) => s + Math.round(Math.round(l.quantity * 1000) * l.unitPrice / 1000), 0))}</strong></p>
                 {draft.payload.note && <p>{draft.payload.note}</p>}
                 <p className="store-muted">Kiểm tra kỹ tên hàng, ngày, đơn vị và giá. Nhắn tiếp để sửa; phiếu mới sẽ thay phiếu cũ. Phiếu hết hạn sau 24 giờ.</p>
+                </>}
                 <div className="store-actions">
                   <button className="store-primary" disabled={busy} onClick={() => void run(async () => {
                     const result = await api("confirm", { id: draft.id });
                     setDraft(null);
                     setReport(null);
-                    setNotice(`${result.alreadyConfirmed ? "Phiếu đã được ghi trước đó" : "Đã ghi sổ thành công"}. Mã phiếu: ${result.receiptId}`);
+                    setNotice(`${result.alreadyConfirmed ? "Đề xuất đã được áp dụng trước đó" : draft.payload.type === "inventory" ? "Đã cập nhật kho thành công" : "Đã ghi sổ thành công"}. Mã phiếu: ${result.receiptId}`);
                   })}>
-                    Xác nhận và ghi sổ
+                    {draft.payload.type === "inventory" ? draft.payload.operation === "archive_product" ? "Xác nhận xóa khỏi kho" : "Xác nhận cập nhật kho" : "Xác nhận và ghi sổ"}
                   </button>
                   <button disabled={busy} onClick={() => void run(async () => {
                     await api("cancel", { id: draft.id });
@@ -221,19 +230,24 @@ export function StoreApp() {
               </section>
             )}
 
-            <form className="store-composer" onSubmit={send}>
+            <form className={`store-composer ${dragging ? "is-dragging" : ""}`} onSubmit={send}
+              onDragOver={event => { event.preventDefault(); if (!busy && !picker.reading) setDragging(true); }}
+              onDragLeave={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false); }}
+              onDrop={event => { setDragging(false); if (!busy && !picker.reading) picker.onDrop(event); else event.preventDefault(); }}>
+              <StoreAttachments files={attachments} disabled={busy} reading={picker.reading} onSelect={files => { void picker.addFiles(files); }} onRemove={index => setAttachments(old => old.filter((_,i) => i !== index))} />
               <label htmlFor="store-message">Nhắn cho trợ lý</label>
               <textarea
                 id="store-message"
                 value={input}
                 onChange={event => setInput(event.target.value)}
+                onPaste={event => { if (!busy && !picker.reading) picker.onPaste(event); }}
                 placeholder="Nhập hàng hôm nay hoặc hỏi về cửa hàng…"
                 maxLength={6000}
                 rows={3}
                 disabled={busy}
-                required
+                required={!attachments.length}
               />
-              <div className="store-composer-footer"><small>Phiếu nhập và bán luôn cần bạn xác nhận.</small><button className="store-primary" disabled={busy || !input.trim()}>
+              <div className="store-composer-footer"><small>Phiếu nhập và bán luôn cần bạn xác nhận.</small><button className="store-primary" disabled={busy || picker.reading || (!input.trim() && !attachments.length)}>
                 {busy ? "Đang xử lý…" : "Gửi tin nhắn"}
                 <span aria-hidden="true">↗</span>
               </button></div>

@@ -21,7 +21,7 @@ export function createChatMockGateway({ secret = process.env.CHATMOCK_GATEWAY_SE
       if (responses) {
         if (req.headers['content-type']?.split(';')[0].trim() !== 'application/json') return send(415, { error: 'JSON required' });
         const chunks = []; let size = 0;
-        for await (const chunk of req) { size += chunk.length; if (size > 128 * 1024) return send(413, { error: 'Body too large' }); chunks.push(chunk); }
+        for await (const chunk of req) { size += chunk.length; if (size > 4 * 1024 * 1024) return send(413, { error: 'Body too large' }); chunks.push(chunk); }
         let payload;
         try { payload = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { return send(400, { error: 'Invalid JSON' }); }
         if (!payload || typeof payload !== 'object' || Array.isArray(payload) || payload.stream === true) return send(400, { error: 'Non-streaming Responses requests only' });

@@ -29,7 +29,9 @@ async function proxy(request: NextRequest) {
     }
     let body: Uint8Array | undefined;
     if (request.method === "POST") {
-      if (Number(request.headers.get("content-length")) > 16384) return Response.json({ error: "Yêu cầu quá lớn." }, { status: 413 });
+      // Keep chat below Vercel's request ceiling, including base64 and JSON overhead.
+      const limit = path === "/api/store/chat" ? 4 * 1024 * 1024 : 16384;
+      if (Number(request.headers.get("content-length")) > limit) return Response.json({ error: "Yêu cầu quá lớn." }, { status: 413 });
       const reader = request.body?.getReader();
       const chunks: Uint8Array[] = [];
       let size = 0;
@@ -39,7 +41,7 @@ async function proxy(request: NextRequest) {
             const { done, value } = await reader.read();
             if (done) break;
             size += value.length;
-            if (size > 16384) { await reader.cancel(); return Response.json({ error: "Yêu cầu quá lớn." }, { status: 413 }); }
+            if (size > limit) { await reader.cancel(); return Response.json({ error: "Yêu cầu quá lớn." }, { status: 413 }); }
             chunks.push(value);
           }
         } finally { reader.releaseLock(); }

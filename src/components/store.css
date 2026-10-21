@@ -662,6 +662,30 @@
 .store-shell ::-webkit-scrollbar-thumb { background: var(--s-border); border-radius: 4px; }
 
 /* Aurora workspace — shares the login page's glass and neon language. */
+.store-upload-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
+.store-upload-toolbar small { display: inline-flex; align-items: center; gap: 6px; color: #94a3b8; font-size: 10px; }
+.store-shell .store-upload-toolbar button { padding: 8px 12px; font-size: 11px; border-color: #34d39940; color: #a7f3d0; }
+.store-shell .store-upload-toolbar input[hidden] { display: none; }
+.store-upload-hint { color: #8b9bb2; font-size: 10px; line-height: 1.75; padding-bottom: 12px; }
+.store-attachments { list-style: none; padding: 0; margin: 10px 0; display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 8px; }
+.store-attachments li { min-width: 0; display: flex; align-items: center; gap: 10px; border: 1px solid #ffffff15; border-radius: 12px; padding: 9px; background: linear-gradient(130deg,#10b9810d,#3b82f60d); }
+.store-attachments li > div { min-width: 0; flex: 1; }
+.store-attachments strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: #dce7f5; }
+.store-attachments small { display: block; font: 9px var(--s-font-mono); color: #94a3b8; margin-top: 5px; }
+.store-shell .store-attachment-thumb { width: 44px; height: 44px; padding: 0; border-radius: 8px; flex-shrink: 0; }
+.store-attachment-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.store-attachment-thumb svg { position: absolute; bottom: 2px; right: 2px; color: white; filter: drop-shadow(0 0 3px black); }
+.store-attachment-file { width: 36px; height: 42px; display: grid; place-items: center; color: #7dd3fc; }
+.store-shell .store-attachment-remove { padding: 6px; flex-shrink: 0; }
+.store-composer.is-dragging { outline: 2px dashed #34d399; outline-offset: 4px; background: #10b98115; }
+.store-image-overlay { position: fixed; inset: 0; z-index: 100000; background: #020610de; backdrop-filter: blur(18px); display: grid; place-items: center; padding: 24px; }
+.store-image-dialog { max-width: 1000px; width: 100%; padding: 16px; background: #0d1422; border: 1px solid #34d39940; border-radius: 20px; box-shadow: 0 0 60px #10b98118; }
+.store-image-dialog header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 12px; }
+.store-image-dialog strong { font-size: 13px; overflow-wrap: anywhere; }
+.store-image-dialog { color: #f0f6fc; font-family: var(--s-font-sans); }
+.store-image-dialog button { color: #a7f3d0; border: 1px solid #34d39940; border-radius: 10px; padding: 8px; cursor: pointer; background: linear-gradient(130deg,#10b98126,#3b82f626); box-shadow: 0 0 16px #10b9810d; }
+.store-image-dialog button:focus-visible { outline: 2px solid #6ee7b7; outline-offset: 3px; }
+.store-image-dialog img { display: block; max-height: 75dvh; max-width: 100%; object-fit: contain; margin: auto; }
 .store-shell { position: relative; isolation: isolate; padding: 24px max(24px, calc((100vw - 1480px)/2)); color-scheme: dark; background: #06090e; }
 .store-shell > :not(.store-aurora):not(.store-toast-container) { position: relative; z-index: 1; }
 .store-aurora { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; background: radial-gradient(ellipse at 50% 0%, #101c2c, #06090e 75%); }

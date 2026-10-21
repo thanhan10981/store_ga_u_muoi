@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { randomUUID } from 'node:crypto';
 import { HttpError, normalize, parseReceipt, querySchema } from './domain.mjs';
+import { confirmInventory } from './inventory.mjs';
 
 export const db = new pg.Pool({ connectionString: process.env.DATABASE_URL, max: 10,
   connectionTimeoutMillis: 15000, idleTimeoutMillis: 30000, statement_timeout: 10000 });
@@ -13,6 +14,8 @@ export async function assertRuntimeRole(pool = db) {
     has_table_privilege(current_user,'receipts','DELETE') OR
     has_table_privilege(current_user,'audit_events','UPDATE') OR
     has_table_privilege(current_user,'audit_events','DELETE') OR
+    has_table_privilege(current_user,'inventory_changes','UPDATE') OR
+    has_table_privilege(current_user,'inventory_changes','DELETE') OR
     has_schema_privilege(current_user,'public','CREATE') AS excessive
     FROM pg_roles WHERE rolname=current_user`);
   if (!rows[0] || Object.values(rows[0]).some(Boolean)) throw new Error('Backend runtime DB role has excessive privileges; use the restricted store_app role.');
@@ -28,31 +31,39 @@ export async function confirmDraft(ownerId, id, pool = db) {
     const draft = rows[0];
     if (!draft) throw new HttpError(404, 'Không tìm thấy phiếu.');
     if (draft.status === 'confirmed') {
-      const old = await client.query('SELECT id FROM receipts WHERE draft_id=$1 AND owner_id=$2', [id, ownerId]);
+      const old = await client.query('SELECT id FROM receipts WHERE draft_id=$1 AND owner_id=$2 UNION ALL SELECT id FROM inventory_changes WHERE draft_id=$1 AND owner_id=$2', [id, ownerId]);
       await client.query('COMMIT');
       return { receiptId: old.rows[0].id, alreadyConfirmed: true };
     }
     if (draft.status !== 'pending' || new Date(draft.expires_at) <= new Date()) throw new HttpError(409, 'Phiếu đã hủy hoặc hết hạn. Hãy tạo phiếu mới.');
+    if (draft.payload.type === 'inventory') {
+      const result = await confirmInventory(ownerId, draft, client);
+      await client.query('COMMIT');
+      return result;
+    }
     const data = parseReceipt(draft.payload);
     const receiptId = randomUUID();
     await client.query('INSERT INTO receipts(id,owner_id,draft_id,kind,business_date,note) VALUES($1,$2,$3,$4,$5,$6)', [receiptId, ownerId, id, data.kind, data.date, data.note]);
     for (const line of data.lines) {
       const product = await client.query(`INSERT INTO products(id,owner_id,name,unit,name_key,unit_key) VALUES($1,$2,$3,$4,$5,$6)
-        ON CONFLICT(owner_id,name_key,unit_key) DO UPDATE SET name=products.name RETURNING id`,
+        ON CONFLICT(owner_id,name_key,unit_key) DO UPDATE SET name=products.name RETURNING id,archived`,
       [randomUUID(), ownerId, line.name, line.unit, normalize(line.name), normalize(line.unit)]);
       const productId = product.rows[0].id;
+      if (product.rows[0].archived) throw new HttpError(409, `Mặt hàng ${line.name} đã xóa khỏi kho. Hãy khôi phục trước khi ghi giao dịch.`);
       if (data.kind === 'sale' || data.kind === 'waste') {
         // Verify historical as well as present stock, including backdated entries.
         const stock = await client.query(`WITH daily AS (
           SELECT r.business_date, sum(CASE r.kind WHEN 'purchase' THEN l.quantity WHEN 'sale' THEN -l.quantity WHEN 'waste' THEN -l.quantity ELSE 0 END) AS delta
           FROM receipt_lines l JOIN receipts r ON r.id=l.receipt_id
           WHERE r.owner_id=$1 AND l.product_id=$2 GROUP BY r.business_date
+          UNION ALL SELECT business_date, delta FROM inventory_changes WHERE owner_id=$1 AND product_id=$2
           UNION ALL SELECT $3::date, -$4::numeric
         ), balances AS (SELECT business_date, sum(sum(delta)) OVER (ORDER BY business_date) AS balance FROM daily GROUP BY business_date)
         SELECT min(balance) AS minimum FROM balances`, [ownerId, productId, data.date, line.quantity]);
         if (Number(stock.rows[0].minimum) < 0) throw new HttpError(409, `Không đủ tồn kho: ${line.name} (${line.unit}). Kiểm tra nhập hàng và ngày giao dịch.`);
       }
       await client.query('INSERT INTO receipt_lines(receipt_id,product_id,quantity,unit_price) VALUES($1,$2,$3,$4)', [receiptId, productId, line.quantity, line.unitPrice]);
+      await client.query('UPDATE products SET revision=revision+1 WHERE id=$1 AND owner_id=$2', [productId,ownerId]);
     }
     await client.query("UPDATE drafts SET status='confirmed' WHERE id=$1", [id]);
     await client.query("INSERT INTO audit_events(owner_id,action,entity_id) VALUES($1,'receipt.confirm',$2)", [ownerId, receiptId]);
@@ -80,9 +91,13 @@ export async function report(ownerId, input, pool = db) {
       FROM receipts r JOIN receipt_lines l ON l.receipt_id=r.id JOIN products p ON p.id=l.product_id
       WHERE r.owner_id=$1 AND r.business_date BETWEEN $2::date AND $3::date AND ($4='' OR position(lower($4) in lower(p.name))>0)
       GROUP BY p.id,r.kind ORDER BY sum(l.amount) DESC,p.name LIMIT 101`, args);
-    const inventory = await client.query(`SELECT p.name,p.unit,sum(CASE r.kind WHEN 'purchase' THEN l.quantity WHEN 'sale' THEN -l.quantity WHEN 'waste' THEN -l.quantity ELSE 0 END)::text AS stock
-      FROM products p JOIN receipt_lines l ON l.product_id=p.id JOIN receipts r ON r.id=l.receipt_id
-      WHERE p.owner_id=$1 AND r.owner_id=$1 AND r.business_date<=$2::date AND r.kind<>'expense' AND ($3='' OR position(lower($3) in lower(p.name))>0)
+    const inventory = await client.query(`WITH movements AS (
+      SELECT l.product_id,r.business_date,CASE r.kind WHEN 'purchase' THEN l.quantity WHEN 'sale' THEN -l.quantity WHEN 'waste' THEN -l.quantity ELSE 0 END AS delta
+      FROM receipt_lines l JOIN receipts r ON r.id=l.receipt_id WHERE r.owner_id=$1 AND r.kind<>'expense'
+      UNION ALL SELECT product_id,business_date,delta FROM inventory_changes WHERE owner_id=$1
+    ) SELECT p.id,p.name,p.unit,coalesce(sum(m.delta),0)::text AS stock
+      FROM products p LEFT JOIN movements m ON m.product_id=p.id AND m.business_date<=$2::date
+      WHERE p.owner_id=$1 AND NOT p.archived AND ($3='' OR position(lower($3) in lower(p.name))>0)
       GROUP BY p.id ORDER BY p.name,p.unit LIMIT 501`, [ownerId, q.to, q.item]);
     await client.query('COMMIT');
     const sum = kind => totals.rows.find(r => r.kind === kind)?.amount ?? '0';
@@ -90,7 +105,7 @@ export async function report(ownerId, input, pool = db) {
       cashDifference: (BigInt(sum('sale')) - BigInt(sum('purchase')) - BigInt(sum('expense'))).toString(),
       totals: totals.rows, series: series.rows, products: products.rows.slice(0, 100), inventory: inventory.rows.slice(0, 500),
       truncated: { products: products.rows.length > 100, inventory: inventory.rows.length > 500 },
-      note: 'Chênh lệch thu chi không phải lợi nhuận. Chưa tính giá vốn, thuế, công nợ, lương nếu chưa nhập. Tồn kho theo đúng tên + đơn vị, không tự quy đổi con/kg hoặc nguyên liệu/thành phẩm.' };
+      note: 'Chênh lệch thu chi không phải lợi nhuận. Điều chỉnh kho không tạo thu/chi. Danh sách kho dùng tên và trạng thái hiện tại; số tồn tính đến ngày đã chọn. Chưa tính giá vốn, thuế, công nợ, lương nếu chưa nhập; không tự quy đổi con/kg.' };
   } catch (error) { await client.query('ROLLBACK'); throw error; }
   finally { client.release(); }
 }

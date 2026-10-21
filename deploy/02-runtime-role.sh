@@ -12,6 +12,7 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON sessions,rate_limits,drafts,chat_messages T
 GRANT SELECT,INSERT,UPDATE ON mfa_used TO store_app;
 GRANT SELECT,INSERT ON receipts,receipt_lines,audit_events TO store_app;
 GRANT SELECT,INSERT ON products TO store_app;
-GRANT UPDATE(name) ON products TO store_app;
+GRANT UPDATE(name,name_key,archived,revision) ON products TO store_app;
+GRANT SELECT,INSERT ON inventory_changes TO store_app;
 GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA public TO store_app;
 SQL

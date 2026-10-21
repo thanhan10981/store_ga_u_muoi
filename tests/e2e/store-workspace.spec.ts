@@ -1,5 +1,33 @@
 import { test, expect } from "@playwright/test";
 
+test("inventory deletion shows before/after and keeps a stale proposal for review", async ({ page }) => {
+  let confirmations = 0;
+  const before = { id:"test-product",name:"Dưa leo",unit:"kg",stock:"5.000",archived:false,revision:"1" };
+  const proposal = { id:"test-inventory-draft",payload:{ type:"inventory",operation:"archive_product",date:"2026-10-21",reason:"Chủ yêu cầu ngừng quản lý",before,after:{...before,stock:"0.000",archived:true} } };
+  await page.route("**/api/store/**", async route => {
+    const path = new URL(route.request().url()).pathname.split("/").at(-1);
+    if (path === "session") return route.fulfill({json:{ username:"Chủ cửa hàng",csrf:"test-only",messages:[],draft:proposal }});
+    if (path === "confirm") { confirmations++; return route.fulfill({status:409,json:{error:"Kho đã thay đổi. Hãy tạo lại đề xuất."}}); }
+    if (path === "cancel") return route.fulfill({json:{ok:true}});
+    return route.fulfill({status:404,json:{}});
+  });
+  await page.goto("/store");
+  await expect(page.getByRole("heading",{name:"Xóa mặt hàng khỏi kho",exact:true})).toBeVisible();
+  await expect(page.getByRole("cell",{name:"Sau xác nhận",exact:true})).toHaveCount(0);
+  await expect(page.getByRole("columnheader",{name:"Sau xác nhận"})).toBeVisible();
+  await expect(page.getByText("Xác nhận sẽ đưa số tồn về 0 và ẩn mặt hàng.",{exact:false})).toBeVisible();
+  expect(confirmations).toBe(0);
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await page.screenshot({path:"artifacts/inventory-review-mobile.png",fullPage:true});
+  await page.getByRole("button",{name:"Xác nhận xóa khỏi kho"}).click();
+  await expect(page.getByText("Kho đã thay đổi. Hãy tạo lại đề xuất.",{exact:true})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Xác nhận xóa khỏi kho"})).toBeVisible();
+  expect(confirmations).toBe(1);
+  await page.getByRole("button",{name:"Hủy phiếu",exact:true}).click();
+  await expect(page.getByRole("button",{name:"Xác nhận xóa khỏi kho"})).toHaveCount(0);
+});
+
 test("store workspace keeps draft confirmation explicit and fits desktop and mobile", async ({ page }) => {
   let confirmations = 0;
   const draft = { id: "test-draft", payload: { kind: "purchase", date: "2026-10-21", note: "Phiếu kiểm thử", lines: [{ name: "Gà ủ muối", unit: "con", quantity: 30, unitPrice: 120000 }] } };

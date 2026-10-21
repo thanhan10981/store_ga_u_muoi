@@ -22,6 +22,15 @@ describe("store backend proxy", () => {
     expect((await POST(request())).status).toBe(503);
     expect(fetch).not.toHaveBeenCalled();
   });
+  it("allows attachment-sized chat bodies while retaining a strict limit on other actions", async () => {
+    config();
+    const fetch = vi.fn().mockResolvedValue(Response.json({ answer: "test" })); vi.stubGlobal("fetch", fetch);
+    const payload = JSON.stringify({ message: "Đọc tệp", attachments: [{ name: "invoice.txt", data: "YQ==".repeat(10000) }] });
+    expect((await POST(request(payload, undefined, "chat"))).status).toBe(200);
+    expect(fetch).toHaveBeenCalledOnce();
+    expect((await POST(request(payload, undefined, "confirm"))).status).toBe(413);
+    expect((await POST(request('"' + 'x'.repeat(4 * 1024 * 1024) + '"', undefined, "chat"))).status).toBe(413);
+  });
   it("forwards only approved headers and sets the internal key server-side", async () => {
     config(); const fetch = vi.fn().mockResolvedValue(new Response('{"ok":true}', { headers: { "set-cookie": "session=abc; HttpOnly", "X-Backend-Key": "must-never-return" } })); vi.stubGlobal("fetch", fetch);
     const response = await POST(request());

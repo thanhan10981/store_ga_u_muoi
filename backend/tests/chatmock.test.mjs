@@ -33,13 +33,15 @@ test('gateway rejects unauthenticated browsers, arbitrary routes and streaming; 
     assert.equal((await post({}, { origin: 'https://shop.example' })).status, 403);
     assert.equal((await post({}, {}, '/login')).status, 404);
     assert.equal((await post({ stream: true })).status, 400);
-    assert.equal((await post({ input: 'x'.repeat(140000) })).status, 413);
+    assert.equal((await post({ input: 'x'.repeat(4 * 1024 * 1024 + 1) })).status, 413);
     assert.equal(calls.length, 0);
-    const response = await post({ input: 'test', tools: [{ type: 'web_search' }], tool_choice: 'auto' }, { cookie: 'must-not-forward', authorization: 'Bearer must-not-forward' });
+    const imageInput = [{ role: 'user', content: [{ type: 'input_text', text: 'test' }, { type: 'input_image', image_url: 'data:image/jpeg;base64,dGVzdA==' }] }];
+    const response = await post({ input: imageInput, tools: [{ type: 'web_search' }], tool_choice: 'auto' }, { cookie: 'must-not-forward', authorization: 'Bearer must-not-forward' });
     assert.equal(response.status, 200);
     assert.equal(calls[0].url, 'http://127.0.0.1:8000/v1/responses');
     assert.equal(calls[0].options.headers.Authorization, 'Bearer chatmock-local');
     assert.equal(calls[0].options.headers.cookie, undefined); assert.equal(calls[0].options.headers['x-chatmock-key'], undefined);
+    assert.deepEqual(JSON.parse(calls[0].options.body).input, imageInput);
     assert.deepEqual(JSON.parse(calls[0].options.body).tools, []); assert.equal(JSON.parse(calls[0].options.body).tool_choice, 'none');
   } finally { await new Promise(resolve => server.close(resolve)); }
 });

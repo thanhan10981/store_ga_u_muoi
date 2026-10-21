@@ -9,6 +9,7 @@ import { parseReceipt, lineTotal, todayVN } from '../domain.mjs';
 import { createStoreServer } from '../server.mjs';
 import { chat } from '../ai.mjs';
 import { provisionRuntime } from '../../deploy/render-runtime.mjs';
+import { proposeInventory, inventoryCatalog } from '../inventory.mjs';
 
 const pg = new PGlite();
 const pool = {
@@ -113,6 +114,11 @@ test('HTTP: proxy authentication, origin, login/MFA, CSRF, session revocation an
   assert.equal((await request('login', { username: 'owner', password, otp })).status, 401, 'MFA code cannot be replayed');
   assert.equal((await request('session', null, auth, 'GET')).status, 200);
   assert.equal((await request('reports', {}, { cookie: auth.cookie })).status, 403);
+  const attachment = { name: 'invoice.txt', data: Buffer.from('Ga 30 con 120000').toString('base64') };
+  assert.equal((await request('chat', { attachments: [attachment] }, { cookie: auth.cookie })).status, 403);
+  assert.equal((await request('chat', { attachments: [attachment] }, auth)).status, 200);
+  assert.equal((await request('chat', { attachments: [{ ...attachment, name: 'script.exe' }] }, auth)).status, 415);
+  assert.equal((await request('chat', { attachments: [{ ...attachment, name: '../bad.txt' }] }, auth)).status, 422);
   assert.equal((await request('chat', { message: 'hello' }, auth)).status, 200);
   const id = await draft(data('purchase', 1), other);
   assert.equal((await request('confirm', { id }, auth)).status, 404);
@@ -133,6 +139,60 @@ test('AI plans cannot write receipts; invalid or incomplete output fails closed,
   await assert.rejects(chat(owner, 'DROP TABLE receipts', simulate({ action: 'sql', sql: 'DROP TABLE receipts' })), /không hợp lệ/);
   assert.equal((await pg.query('SELECT count(*)::int AS n FROM receipts')).rows[0].n, before);
 });
+test('owner inventory edits require confirmation, preserve finance, reject stale drafts and retain deletion history', async () => {
+  const receipt = data('purchase',10); receipt.lines[0].name = 'Kho kiểm kê';
+  await confirmDraft(owner,await draft(receipt),pool);
+  const product = (await inventoryCatalog(owner,pool)).find(p => p.name === 'Kho kiểm kê');
+  const input = { productId: product.id, operation: 'set_stock', quantity: 7, name: null, reason: 'Chủ cửa hàng kiểm kê lại' };
+  const payload = await proposeInventory(owner,input,pool);
+  assert.equal(Number((await inventoryCatalog(owner,pool,product.id))[0].stock),10);
+  const id = await draft(payload);
+  const confirmed = await confirmDraft(owner,id,pool);
+  assert.equal((await confirmDraft(owner,id,pool)).receiptId,confirmed.receiptId);
+  assert.equal(Number((await inventoryCatalog(owner,pool,product.id))[0].stock),7);
+  await assert.rejects(proposeInventory(other,input,pool),/Không tìm thấy/);
+  await assert.rejects(proposeInventory(owner,{ ...input,quantity:-1 },pool));
+  const obsolete = await draft(await proposeInventory(owner,{ ...input,quantity:20 },pool));
+  const sale = data('sale',3,180000); sale.lines[0].name = 'Kho kiểm kê';
+  await confirmDraft(owner,await draft(sale),pool);
+  await assert.rejects(confirmDraft(owner,obsolete,pool),/Kho đã thay đổi/);
+  assert.equal(Number((await inventoryCatalog(owner,pool,product.id))[0].stock),4);
+  const renamed = await proposeInventory(owner,{ ...input,operation:'rename_product',quantity:null,name:'Kho tên mới' },pool);
+  await confirmDraft(owner,await draft(renamed),pool);
+  assert.equal((await inventoryCatalog(owner,pool,product.id))[0].name,'Kho tên mới');
+  const q = { from:todayVN(),to:todayVN(),bucket:'day',item:'' };
+  const before = await report(owner,q,pool);
+  const remove = await proposeInventory(owner,{ ...input,operation:'archive_product',quantity:null },pool);
+  const removeId = await draft(remove);
+  await confirmDraft(owner,removeId,pool);
+  const after = await report(owner,q,pool);
+  assert.equal(after.revenue,before.revenue); assert.equal(after.purchases,before.purchases);
+  assert.equal(after.inventory.some(p => p.id === product.id),false);
+  assert.equal((await inventoryCatalog(owner,pool,product.id))[0].archived,true);
+  const archivedPurchase = data('purchase',1); archivedPurchase.lines[0].name = 'Kho tên mới';
+  await assert.rejects(confirmDraft(owner,await draft(archivedPurchase),pool),/khôi phục/);
+  await confirmDraft(owner,await draft(await proposeInventory(owner,{ ...input,operation:'restore_product',quantity:null },pool)),pool);
+  const restored = (await inventoryCatalog(owner,pool,product.id))[0];
+  assert.equal(restored.archived,false); assert.equal(Number(restored.stock),0);
+  const history = await pg.query('SELECT before_state,after_state FROM inventory_changes WHERE draft_id=$1',[removeId]);
+  assert.equal(Number(history.rows[0].before_state.stock),4); assert.equal(history.rows[0].after_state.archived,true);
+  const cancelled = await draft(await proposeInventory(owner,input,pool));
+  await pg.query("UPDATE drafts SET status='cancelled' WHERE id=$1",[cancelled]);
+  await assert.rejects(confirmDraft(owner,cancelled,pool),/hủy/);
+});
+
+test('AI inventory plan is a proposal, cannot apply changes or affect another owner', async () => {
+  const product = (await inventoryCatalog(owner,pool)).find(p => !p.archived);
+  const before = product.stock;
+  const inventory = { productId:product.id,operation:'set_stock',quantity:9,name:null,reason:'Kiểm kê theo yêu cầu chủ' };
+  const plan = { action:'inventory',inventory,receipt:null,query:null,answer:'Đã sửa kho' };
+  const options = { pool, client:{ responses:{ create:async () => ({status:'completed',output_text:JSON.stringify(plan)}) } } };
+  const result = await chat(owner,'Sửa tồn mặt hàng thành 9',options);
+  assert.match(result.answer,/chưa áp dụng/);
+  assert.equal((await inventoryCatalog(owner,pool,product.id))[0].stock,before);
+  await assert.rejects(chat(other,'Sửa kho',options),/Không tìm thấy/);
+});
+
 test('deployed runtime grants permit confirmation/report and prohibit changing credentials or posted ledger', async () => {
   await assert.rejects(assertRuntimeRole(pool), /excessive privileges/);
   const script = await readFile(new URL('../../deploy/02-runtime-role.sh', import.meta.url), 'utf8');
@@ -154,9 +214,15 @@ test('deployed runtime grants permit confirmation/report and prohibit changing c
     await assertRuntimeRole(pool);
     assert.ok((await confirmDraft(owner, id, pool)).receiptId);
     assert.ok((await report(owner, { from: todayVN(), to: todayVN(), bucket: 'day', item: '' }, pool)).purchases);
+    const product = (await inventoryCatalog(owner,pool)).find(p => !p.archived);
+    const proposed = await proposeInventory(owner,{ productId:product.id,operation:'set_stock',quantity:6,name:null,reason:'Kiểm kê' },pool);
+    await confirmDraft(owner,await draft(proposed),pool);
     await assert.rejects(pg.query("UPDATE owners SET password_hash='tampered' WHERE id=$1", [owner]), /permission denied/);
     await assert.rejects(pg.query('DELETE FROM receipts'), /permission denied/);
     await assert.rejects(pg.query("UPDATE receipts SET note='tampered'"), /permission denied/);
     await assert.rejects(pg.query('DELETE FROM audit_events'), /permission denied/);
+    await assert.rejects(pg.query('DELETE FROM inventory_changes'), /permission denied/);
+    await assert.rejects(pg.query("UPDATE inventory_changes SET reason='tampered'"), /permission denied/);
+    await assert.rejects(pg.query("UPDATE products SET unit='kg'"), /permission denied/);
   } finally { await pg.exec('RESET ROLE'); }
 });

@@ -14,20 +14,26 @@
     "backend:dev": "node --env-file-if-exists=.env.backend backend/server.mjs",
     "backend:migrate": "node --env-file-if-exists=.env.backend backend/admin.mjs migrate",
     "backend:owner": "node --env-file-if-exists=.env.backend backend/admin.mjs owner",
-    "test:backend": "node --test backend/tests/*.test.mjs",
+    "test:backend": "node --test --test-concurrency=1 backend/tests/*.test.mjs",
     "render:setup": "node --env-file=.env.render-admin deploy/render-setup.mjs",
+    "render:migrate": "node --env-file=.env.render-admin deploy/inventory-migrate.mjs",
     "chatmock:gateway": "node --env-file=.env.chatmock-gateway backend/chatmock-gateway.mjs"
   },
   "dependencies": {
+    "exceljs": "^4.4.0",
     "lucide-react": "^0.577.0",
+    "mammoth": "^1.13.0",
     "next": "16.4.2",
     "openai": "7.34.0",
+    "pdf-parse": "^2.4.5",
     "pg": "^8.23.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "server-only": "^0.0.1",
+    "sharp": "^0.35.5",
+    "yauzl": "^3.4.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -42,5 +48,13 @@
     "tailwindcss": "4.3.3",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"
+  },
+  "overrides": {
+    "exceljs": {
+      "uuid": "^11.1.1"
+    },
+    "mammoth": {
+      "argparse": "^2.0.1"
+    }
   }
 }
