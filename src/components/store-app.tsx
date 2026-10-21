@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { StoreLogin } from "./store-login";
+import { LoginPage } from "./login-page";
 import { StoreToastStack, type ToastItem } from "./store-toast";
 import "./store.css";
 
@@ -77,20 +77,6 @@ export function StoreApp() {
     finally { setBusy(false); }
   }
 
-  function login(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    void run(async () => {
-      await api("login", { username: data.get("username"), password: data.get("password"), otp: data.get("otp") });
-      // Re-fetch authoritative pending draft after login (including another device's draft).
-      const response = await fetch("/api/store/session", { cache: "no-store" });
-      if (!response.ok) throw new Error("Chưa xác minh được phiên đăng nhập. Hãy tải lại trang rồi thử lại.");
-      const state = await response.json();
-      setUser(state); setDraft(state.draft); setMessages(state.messages ?? []);
-      setNotice("Đăng nhập thành công! Chào mừng trở lại.");
-    });
-  }
-
   function send(event: FormEvent) {
     event.preventDefault(); if (!input.trim()) return;
     const message = input.trim();
@@ -102,6 +88,13 @@ export function StoreApp() {
       if (result.report) setReport(result.report);
     });
   }
+
+  if (!loading && !user) return (
+    <>
+      <StoreToastStack toasts={toasts} onDismiss={dismissToast} />
+      <LoginPage />
+    </>
+  );
 
   return (
     <main className="store-shell">
@@ -142,8 +135,6 @@ export function StoreApp() {
           <div className="store-loading-dot"/><div className="store-loading-dot"/><div className="store-loading-dot"/>
           <span>Đang kiểm tra phiên đăng nhập…</span>
         </div>
-      ) : !user ? (
-        <StoreLogin busy={busy} onSubmit={login} />
       ) : (
         <div className="store-grid">
           <section className="store-card store-chat">
