@@ -1,0 +1,7 @@
+# Design & Coding Rules for AI Coding Assistants (Codex / Cursor / Copilot)
+
+Whenever writing or updating UI/CSS/React components in this project:
+1. ALWAYS read and adhere to `UI_DESIGN_GUIDE.md`.
+2. AESTHETICS STANDARD: Ultra-premium dark luxury, multi-layer glassmorphism (`backdrop-filter: blur(24px)`), neon emerald & sapphire gradients, subtle aurora background glows.
+3. NO CHEAP/BASIC ELEMENTS: Never use flat buttons, default browser alerts, or generic lock icons. Use custom SVG emblems and glowing interactive states.
+4. FONTS: Plus Jakarta Sans for body/headings, JetBrains Mono for codes/numbers/OTP.
