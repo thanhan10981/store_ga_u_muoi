@@ -8,3 +8,4 @@ backups/
 **/auth.json
 *.dump
 *.log
+.chatmock-run/

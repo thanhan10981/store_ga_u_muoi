@@ -10,3 +10,4 @@ artifacts
 backups
 *.dump
 *.log
+.chatmock-run

@@ -8,6 +8,19 @@ Luồng dùng máy cá nhân:
 
 Máy phải bật, không ngủ, có mạng; ChatMock, gateway và tunnel phải cùng chạy. Token ChatGPT chỉ ở máy cá nhân, không đưa lên Render, database, Git hoặc frontend. `OPENAI_API_KEY` thật không được gửi sang gateway.
 
+## Bật/tắt bằng nhấp đúp trên Windows
+
+Trong thư mục dự án cạnh `package.json`:
+
+- Nhấp đúp **`Bat-Chatbot.cmd`**: mở ChatMock, gateway và Quick Tunnel trong nền, hiển thị một cửa sổ điều khiển. Không cần VS Code. Nếu ChatMock/gateway đã chạy thủ công, launcher dùng lại; các tiến trình thủ công vẫn phải tắt riêng.
+- Giữ cửa sổ điều khiển mở. Khi có URL tunnel mới, copy dòng `CHATMOCK_BASE_URL=...` vào Render và redeploy. Dòng này cũng lưu trong `.chatmock-run/render-env.txt`; không chứa khóa gateway.
+- Nhấp đúp **`Tat-Chatbot.cmd`** hoặc nhấn Ctrl+C trong cửa sổ điều khiển để tắt các tiến trình do launcher mở. Launcher không tự kill các dịch vụ đã mở thủ công.
+- Nếu hết phiên, tắt trước, nhấp đúp **`Dang-nhap-ChatMock.cmd`**, hoàn tất đăng nhập rồi bật lại.
+
+Launcher không đổi biến Render hoặc tự cập nhật DNS. Quick Tunnel vẫn đổi URL khi mở lại; muốn bỏ bước cập nhật Render phải cấu hình tunnel có hostname cố định. Cần Python, Node/dependency, cloudflared và `.env.chatmock-gateway` đã thiết lập một lần. Kiểm tra điều kiện mà chưa khởi chạy bằng `node deploy/desktop-launcher.mjs --check`.
+
+Có thể tạo shortcut bằng cách nhấp phải `Bat-Chatbot.cmd` → Send to → Desktop (create shortcut). Không copy riêng file CMD ra thư mục khác vì các file còn lại vẫn nằm trong dự án. Log và trạng thái launcher ở `.chatmock-run/`, được loại khỏi Git/Docker/Vercel; không chia sẻ toàn bộ thư mục runtime.
+
 ## 1. Chạy ChatMock trên PC
 
 Tại thư mục gốc dự án:

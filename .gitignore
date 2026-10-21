@@ -10,6 +10,7 @@ dist/
 !.env.render-admin.example
 !.env.render.example
 !.env.chatmock-gateway.example
+!.env.chatmock-tunnel.example
 backups/
 *.dump
 *.tsbuildinfo
@@ -23,4 +24,5 @@ test-results/
 __pycache__/
 *.pyc
 .chatmock/
+.chatmock-run/
 **/auth.json
