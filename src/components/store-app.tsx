@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { LoginPage } from "./login-page";
 import { StoreToastStack, type ToastItem } from "./store-toast";
 import "./store.css";
@@ -21,6 +21,16 @@ const labels: Record<string, string> = { purchase: "Nhập hàng", sale: "Bán h
 const money = (n: number | string) => `${new Intl.NumberFormat("vi-VN").format(typeof n === "string" && /^-?\d+$/.test(n) ? BigInt(n) : Number(n))} ₫`;
 const localToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
+function StoreEmblem() {
+  return <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+    <circle cx="32" cy="32" r="28" stroke="currentColor" strokeOpacity=".25" />
+    <path d="M32 5 55 18v28L32 59 9 46V18Z" stroke="currentColor" strokeWidth="1.5" />
+    <path d="M32 13 48 22v20L32 51 16 42V22Z" fill="currentColor" fillOpacity=".08" stroke="currentColor" strokeOpacity=".4" />
+    <path d="M39 26a10 10 0 1 0 2 12v-6H31" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="55" cy="18" r="3" fill="currentColor" />
+  </svg>;
+}
+
 export function StoreApp() {
   const [user, setUser] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -35,19 +45,19 @@ export function StoreApp() {
   const [bucket, setBucket] = useState("day");
   const [item, setItem] = useState("");
 
-  function addToast(type: "error" | "notice" | "info", message: string, title?: string) {
+  const addToast = useCallback((type: "error" | "notice" | "info", message: string, title?: string) => {
     if (!message) return;
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     setToasts(prev => [...prev, { id, type, message, title }]);
-  }
+  }, []);
 
   function dismissToast(id: string) {
     setToasts(prev => prev.filter(t => t.id !== id));
   }
 
-  function setError(msg: string) {
+  const setError = useCallback((msg: string) => {
     if (msg) addToast("error", msg, "Lỗi thao tác");
-  }
+  }, [addToast]);
 
   function setNotice(msg: string) {
     if (msg) addToast("notice", msg, "Thông báo hệ thống");
@@ -60,7 +70,7 @@ export function StoreApp() {
       if (response.ok) { setUser(data); setDraft(data.draft); setMessages(data.messages ?? []); }
       else if (response.status !== 401) setError(data.error ?? "Không kết nối được backend.");
     }).catch(() => setError("Không kết nối được backend.")).finally(() => setLoading(false));
-  }, []);
+  }, [setError]);
 
   async function api(path: string, body: unknown) {
     const response = await fetch(`/api/store/${path}`, { method: "POST", headers: { "Content-Type": "application/json", "x-csrf-token": user?.csrf ?? "" }, body: JSON.stringify(body) });
@@ -98,21 +108,22 @@ export function StoreApp() {
 
   return (
     <main className="store-shell">
+      <div className="store-aurora" aria-hidden="true"><i /><i /><i /><div /></div>
       {/* Thông báo nổi dạng Toast ghim góc trên, không làm giật layout */}
       <StoreToastStack toasts={toasts} onDismiss={dismissToast} />
 
       <header className="store-header">
         <div className="store-header-left">
-          <div className="store-header-logo" aria-hidden="true">🐔</div>
+          <div className="store-header-logo"><StoreEmblem /></div>
           <div>
-            <span className="store-eyebrow">GÀ · SỔ CỬA HÀNG</span>
+            <span className="store-eyebrow">GÀ · KHÔNG GIAN QUẢN LÝ</span>
             <h1>Gà ủ muối</h1>
             <p>Nhập hàng, theo dõi buôn bán, hiểu cửa hàng qua hội thoại.</p>
           </div>
         </div>
         {user && (
           <div className="store-account">
-            <span>{user.username}</span>
+            <span className="store-user"><span className="store-avatar">{user.username.slice(0, 1).toUpperCase()}</span>{user.username}</span>
             <button
               disabled={busy}
               onClick={() => void run(async () => {
@@ -136,16 +147,26 @@ export function StoreApp() {
           <span>Đang kiểm tra phiên đăng nhập…</span>
         </div>
       ) : (
+        <>
+        <section className="store-welcome" aria-labelledby="store-welcome-title">
+          <div><span className="store-eyebrow">MỖI NGÀY MỘT CHÚT THẢNH THƠI</span><h2 id="store-welcome-title">Nắm rõ cửa hàng.<br /><em>Nhẹ nhàng từng ngày.</em></h2><p>Ghi sổ bằng hội thoại, kiểm tra trước khi lưu.<br />Mọi con số ở đây đều bắt đầu từ cửa hàng của bạn.</p></div>
+          <div className="store-welcome-orbit" aria-hidden="true"><StoreEmblem /><span>SỔ CỬA HÀNG · TRỢ LÝ AI</span></div>
+        </section>
+        <nav className="store-overview" aria-label="Lối tắt cửa hàng">
+          <a href="#store-chat"><span className="store-tile-index">01 / HỘI THOẠI</span><strong>Trợ lý cửa hàng <span>↗</span></strong><small>{messages.length ? `${messages.length} tin nhắn trong sổ trò chuyện` : "Nhập hàng, ghi bán và hỏi về cửa hàng"}</small></a>
+          <a href="#store-draft"><span className="store-tile-index">02 / CHỜ XÁC NHẬN</span><strong>{draft ? "Có phiếu cần kiểm tra" : "Sổ sách đã sẵn sàng"}<span>↗</span></strong><small>{draft ? `${labels[draft.payload.kind]} · ${draft.payload.lines.length} mặt hàng` : "Chỉ ghi sổ khi bạn xác nhận phiếu"}</small></a>
+          <a href="#store-reports"><span className="store-tile-index">03 / BÁO CÁO</span><strong>Hiểu những con số <span>↗</span></strong><small>{report ? `${report.query.from} → ${report.query.to}` : "Doanh thu, chi phí và tồn kho thực tế"}</small></a>
+        </nav>
         <div className="store-grid">
-          <section className="store-card store-chat">
+          <section id="store-chat" className="store-card store-chat">
             <div className="store-section-heading">
-              <h2>Trợ lý cửa hàng</h2>
-              <span>Cần xác nhận trước khi ghi sổ</span>
+              <div><span className="store-eyebrow">CÙNG BẠN GHI SỔ</span><h2>Trợ lý cửa hàng</h2></div>
+              <span className="store-live">Bạn duyệt trước khi lưu</span>
             </div>
-            <p className="store-muted">Ví dụ: "Hôm nay nhập 30 con gà ủ muối giá 120.000đ/con, 50 hộp giá 3.000đ/hộp". Ghi rõ đơn giá và đơn vị từng món; bạn có thể bổ sung qua nhiều tin nhắn.</p>
+            <p className="store-muted">Ví dụ: “Hôm nay nhập 30 con gà ủ muối giá 120.000đ/con, 50 hộp giá 3.000đ/hộp”. Ghi rõ đơn giá và đơn vị từng món; bạn có thể bổ sung qua nhiều tin nhắn.</p>
             <div className="store-messages" aria-live="polite">
               {messages.length === 0 && (
-                <div className="store-empty">Bắt đầu bằng một phiếu nhập, phiếu bán hoặc câu hỏi "Tình hình buôn bán tháng này và cần nhập thêm gì?"</div>
+                <div className="store-empty store-chat-welcome"><div className="store-assistant-emblem"><StoreEmblem /></div><h3>Hôm nay cửa hàng thế nào?</h3><p>Từ một lần nhập hàng đến bức tranh buôn bán,<br />cứ nhắn cho Gà bằng lời của bạn.</p><div className="store-suggestions">{["Hôm nay nhập 30 con gà ủ muối", "Tình hình buôn bán tháng này thế nào?", "Cửa hàng đang còn những mặt hàng nào?"].map(text => <button type="button" key={text} disabled={busy} onClick={() => { setInput(text); document.getElementById("store-message")?.focus(); }}>{text}<span aria-hidden="true">↗</span></button>)}</div></div>
               )}
               {messages.map((message, i) => (
                 <article key={i} className={`store-message ${message.role === "user" ? "is-user" : ""}`}>
@@ -155,6 +176,7 @@ export function StoreApp() {
               ))}
             </div>
 
+            <div id="store-draft" />
             {draft && (
               <section className="store-draft">
                 <span className="store-eyebrow">PHIẾU NHÁP · CHƯA GHI SỔ</span>
@@ -211,14 +233,16 @@ export function StoreApp() {
                 disabled={busy}
                 required
               />
-              <button className="store-primary" disabled={busy || !input.trim()}>
+              <div className="store-composer-footer"><small>Phiếu nhập và bán luôn cần bạn xác nhận.</small><button className="store-primary" disabled={busy || !input.trim()}>
                 {busy ? "Đang xử lý…" : "Gửi tin nhắn"}
-              </button>
+                <span aria-hidden="true">↗</span>
+              </button></div>
             </form>
           </section>
 
-          <aside className="store-card store-reports">
-            <h2>Báo cáo từ sổ cửa hàng</h2>
+          <aside id="store-reports" className="store-card store-reports">
+            <div className="store-section-heading"><div><span className="store-eyebrow">GÓC NHÌN KINH DOANH</span><h2>Báo cáo cửa hàng</h2></div><span>TỪ SỔ ĐÃ GHI</span></div>
+            <p className="store-muted">Chọn khoảng thời gian bạn muốn nhìn lại.</p>
             <form onSubmit={event => {
               event.preventDefault();
               void run(async () => {
@@ -305,6 +329,8 @@ export function StoreApp() {
             )}
           </aside>
         </div>
+        <footer className="store-footer"><span>GÀ Ủ MUỐI <b> / </b> Sổ cửa hàng của bạn</span><span>Hiểu từng con số · Chủ động từng quyết định</span></footer>
+        </>
       )}
     </main>
   );
