@@ -38,6 +38,7 @@ export function StoreApp() {
   const [user, setUser] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -94,15 +95,18 @@ export function StoreApp() {
   }
 
   function send(event: FormEvent) {
-    event.preventDefault(); if (picker.reading || (!input.trim() && !attachments.length)) return;
+    event.preventDefault(); if (busy || picker.reading || (!input.trim() && !attachments.length)) return;
     const message = input.trim();
     void run(async () => {
-      const result = await api("chat", storeChatRequest(message, attachments));
-      const sent = `${message || "Đọc tệp đính kèm"}${attachments.length ? `\n[Đính kèm: ${attachments.map(file => file.name).join(", ")}]` : ""}`;
-      setMessages(old => [...old, { role: "user", content: sent }, { role: "assistant", content: result.answer }]);
-      setInput(""); setAttachments([]);
-      if (result.draft) setDraft(result.draft);
-      if (result.report) setReport(result.report);
+      setSending(true);
+      try {
+        const result = await api("chat", storeChatRequest(message, attachments));
+        const sent = `${message || "Đọc tệp đính kèm"}${attachments.length ? `\n[Đính kèm: ${attachments.map(file => file.name).join(", ")}]` : ""}`;
+        setMessages(old => [...old, { role: "user", content: sent }, { role: "assistant", content: result.answer }]);
+        setInput(""); setAttachments([]);
+        if (result.draft) setDraft(result.draft);
+        if (result.report) setReport(result.report);
+      } finally { setSending(false); }
     });
   }
 
@@ -248,9 +252,10 @@ export function StoreApp() {
                 disabled={busy}
                 required={!attachments.length}
               />
-              <div className="store-composer-footer"><small>Phiếu nhập và bán luôn cần bạn xác nhận.</small><button className="store-primary" disabled={busy || picker.reading || (!input.trim() && !attachments.length)}>
-                {busy ? "Đang xử lý…" : "Gửi tin nhắn"}
-                <span aria-hidden="true">↗</span>
+              <div className="store-composer-footer"><small>Phiếu nhập và bán luôn cần bạn xác nhận.</small><button className="store-primary" aria-busy={sending} disabled={busy || picker.reading || (!input.trim() && !attachments.length)}>
+                {sending && <span className="store-send-spinner" aria-hidden="true" />}
+                <span aria-live="polite">{sending ? "AI đang trả lời…" : "Gửi tin nhắn"}</span>
+                {!sending && <span aria-hidden="true">↗</span>}
               </button></div>
             </form>
           </section>
