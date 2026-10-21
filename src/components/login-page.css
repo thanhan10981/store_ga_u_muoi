@@ -658,3 +658,33 @@
   .lp-chips { display: none; }
   .lp-step-line { width: 50px; }
 }
+
+/* Match the store's softer reading palette. */
+.lp-root { background: #151b23; color: #cbd3dd; color-scheme: dark; }
+.lp-bg { background: #151b23; }
+.lp-aurora { opacity: .06; animation: none; mix-blend-mode: normal; }
+.lp-grid-overlay { opacity: .2; }
+.lp-orb, .lp-card-ring { display: none; }
+.lp-topbar { background: #171e27e6; }
+.lp-card { background: #1b232df5; border-color: #ffffff12; box-shadow: 0 16px 44px #00000030; }
+.lp-title { background: none; -webkit-text-fill-color: currentColor; color: #cbd3dd; font-weight: 650; line-height: 1.25; }
+.lp-brand-name { color: #cbd3dd; }
+.lp-subtitle, .lp-field label, .lp-field-hint, .lp-footer, .lp-topbar-right, .lp-chips span { color: #a0acbb; }
+.lp-eyebrow { color: #a8bdb4; }
+.lp-status-dot, .lp-eyebrow-dot { background: #96b8ac; box-shadow: none; animation: none; }
+.lp-icon-badge-inner { background: #91b4a60d; color: #96b8ac; border-color: #91b4a633; box-shadow: none; animation: none; }
+.lp-emblem-svg { filter: saturate(.35); }
+.lp-icon-badge-ring, .lp-icon-badge-ring--2 { opacity: .2; animation: none; box-shadow: none; }
+.lp-step.is-active span:first-child, .lp-step.is-done span:first-child { color: #b4cbbd; border-color: #91b4a65c; background: #91b4a612; box-shadow: none; }
+.lp-step.is-active span:last-child, .lp-step.is-done span:last-child { color: #adc4b7; }
+.lp-step-line::after { background: #91b4a6; }
+.lp-input-wrap input { background: #171e27; color: #cbd3dd; border-color: #ffffff1a; }
+.lp-input-wrap input::placeholder { color: #8b98a9; }
+.lp-input-wrap input:focus { background: #171e27; border-color: #9ab7a970; box-shadow: 0 0 0 2px #9ab7a910; }
+.lp-pw-toggle, .lp-otp-icon { color: #a0acbb; }
+.lp-submit, .lp-submit:hover:not(:disabled) { background: #34564a; color: #d3e0d8; box-shadow: none; font-weight: 600; }
+.lp-submit--otp, .lp-submit--otp:hover:not(:disabled) { background: #354d62; color: #d0dce7; box-shadow: none; }
+.lp-back { color: #b6c2ce; background: #25313d; }
+.lp-otp-ready { color: #adc4b7; background: #91b4a612; }
+.lp-footer svg { color: #96b8ac; }
+.lp-root :is(button,input):focus-visible { outline: 2px solid #9ab7a9; outline-offset: 3px; }

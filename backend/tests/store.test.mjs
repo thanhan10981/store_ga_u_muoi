@@ -191,6 +191,8 @@ test('AI inventory plan is a proposal, cannot apply changes or affect another ow
   assert.match(result.answer,/chưa áp dụng/);
   assert.equal((await inventoryCatalog(owner,pool,product.id))[0].stock,before);
   await assert.rejects(chat(other,'Sửa kho',options),/Không tìm thấy/);
+  plan.inventory = null;
+  await assert.rejects(chat(owner,'Sửa kho',options),error => error.status === 502 && /chưa xác định đủ/.test(error.message));
 });
 
 test('deployed runtime grants permit confirmation/report and prohibit changing credentials or posted ledger', async () => {

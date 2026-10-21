@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { LoginPage } from "./login-page";
 import { StoreAttachments, useAttachmentPicker, type ChatAttachment } from "./store-attachments";
 import { InventoryReview, inventoryLabels, type InventoryPayload } from "./inventory-review";
+import { storeChatRequest } from "@/lib/store-chat-request";
 import { StoreToastStack, type ToastItem } from "./store-toast";
 import "./store.css";
 
@@ -96,7 +97,7 @@ export function StoreApp() {
     event.preventDefault(); if (picker.reading || (!input.trim() && !attachments.length)) return;
     const message = input.trim();
     void run(async () => {
-      const result = await api("chat", { message, attachments });
+      const result = await api("chat", storeChatRequest(message, attachments));
       const sent = `${message || "Đọc tệp đính kèm"}${attachments.length ? `\n[Đính kèm: ${attachments.map(file => file.name).join(", ")}]` : ""}`;
       setMessages(old => [...old, { role: "user", content: sent }, { role: "assistant", content: result.answer }]);
       setInput(""); setAttachments([]);

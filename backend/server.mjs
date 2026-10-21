@@ -93,9 +93,10 @@ export function createStoreServer({ database = db, chatHandler = chat } = {}) {
         return send(200, { ok: true }, { 'Set-Cookie': cookie('', 0) });
       }
       if (path === '/api/store/chat') {
-        stage = 'chat.rate_limit';
+        stage = 'chat.validate';
         const { message, attachments } = chatRequestSchema.parse(data);
         validateAttachments(attachments);
+        stage = 'chat.rate_limit';
         await rateLimit(pool, `ai:minute:${user.owner_id}`, 10);
         await rateLimit(pool, `ai:day:${user.owner_id}`, dailyLimit, 86400);
         // Cross-process lock, not just an in-memory flag. Dedicated DB connection holds it during AI calls.
@@ -131,7 +132,8 @@ export function createStoreServer({ database = db, chatHandler = chat } = {}) {
       if (status === 503) console.error(JSON.stringify({ requestId, event: 'request_failed', stage,
         aiProvider: ['openai','chatmock'].includes(process.env.AI_PROVIDER?.trim() || 'openai') ? process.env.AI_PROVIDER?.trim() || 'openai' : 'invalid',
         code: typeof error.code === 'string' && /^[A-Z0-9_]{2,40}$/.test(error.code) ? error.code : error instanceof HttpError ? 'APPLICATION_ERROR' : 'UPSTREAM_OR_DATABASE' }));
-      send(status, { error: error instanceof HttpError ? error.message : status === 422 ? 'Dữ liệu không hợp lệ.' : 'Dịch vụ tạm thời không khả dụng. Chưa thể xác nhận kết quả; hãy tải lại phiếu trước khi thử lại.', requestId }, status === 429 ? { 'Retry-After': '300' } : {});
+      const schemaMissing = stage === 'chat.ai' && ['42P01','42703'].includes(error.code);
+      send(status, { error: error instanceof HttpError ? error.message : status === 422 ? stage === 'chat.validate' ? 'Tin nhắn hoặc tệp chưa đúng định dạng. Hãy kiểm tra tệp đính kèm rồi thử lại.' : 'Dữ liệu không hợp lệ.' : schemaMissing ? 'Database chưa hoàn tất cập nhật tính năng kho. Chạy npm run render:migrate trên laptop rồi deploy backend mới.' : 'Dịch vụ tạm thời không khả dụng. Chưa thể xác nhận kết quả; hãy tải lại phiếu trước khi thử lại.', requestId }, status === 429 ? { 'Retry-After': '300' } : {});
     }
   });
   server.requestTimeout = 20000;
